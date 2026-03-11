@@ -1,0 +1,153 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "PostgreSQL Up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } }, "type": "value" }
+          ],
+          "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+      "targets": [
+        { "expr": "pg_up", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Active Connections",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "pg_stat_activity_count", "legendFormat": "{{datname}} - {{state}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Max Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "pg_settings_max_connections", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Connection Utilization %",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0, "max": 100,
+          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 60 }, { "color": "red", "value": 85 }] }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(pg_stat_activity_count) / pg_settings_max_connections * 100", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Database Size",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        { "expr": "pg_database_size_bytes", "legendFormat": "{{datname}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Transactions (commits / rollbacks)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "targets": [
+        { "expr": "rate(pg_stat_database_xact_commit{datname!=\"\"}[5m])", "legendFormat": "{{datname}} commits/s", "refId": "A" },
+        { "expr": "rate(pg_stat_database_xact_rollback{datname!=\"\"}[5m])", "legendFormat": "{{datname}} rollbacks/s", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Cache Hit Ratio",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0, "max": 1,
+          "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 0.9 }, { "color": "green", "value": 0.95 }] }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "pg_stat_database_blks_hit{datname!=\"\"} / (pg_stat_database_blks_hit{datname!=\"\"} + pg_stat_database_blks_read{datname!=\"\"})", "legendFormat": "{{datname}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Tuples Returned / Fetched",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "targets": [
+        { "expr": "rate(pg_stat_database_tup_returned{datname!=\"\"}[5m])", "legendFormat": "{{datname}} returned/s", "refId": "A" },
+        { "expr": "rate(pg_stat_database_tup_fetched{datname!=\"\"}[5m])", "legendFormat": "{{datname}} fetched/s", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Tuples Inserted / Updated / Deleted",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "targets": [
+        { "expr": "rate(pg_stat_database_tup_inserted{datname!=\"\"}[5m])", "legendFormat": "{{datname}} ins/s", "refId": "A" },
+        { "expr": "rate(pg_stat_database_tup_updated{datname!=\"\"}[5m])", "legendFormat": "{{datname}} upd/s", "refId": "B" },
+        { "expr": "rate(pg_stat_database_tup_deleted{datname!=\"\"}[5m])", "legendFormat": "{{datname}} del/s", "refId": "C" }
+      ]
+    },
+    {
+      "title": "Deadlocks",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "rate(pg_stat_database_deadlocks{datname!=\"\"}[5m])", "legendFormat": "{{datname}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Locks by Mode",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "pg_locks_count", "legendFormat": "{{datname}} {{mode}}", "refId": "A" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["postgres", "database"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "PostgreSQL",
+  "uid": "postgres-overview",
+  "version": 1
+}

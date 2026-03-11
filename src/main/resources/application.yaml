@@ -1,0 +1,61 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: "Invest Platform API"
+    version: "v1"
+    description: "Сервис для управления инвестиционными портфелями"
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://tempo:4318/v1/traces
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+app:
+  minio:
+    url: ${MINIO_URL}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET}
+  jwt:
+    secret: ${SPRING_JWT_SECRET}
+    access-expiration: 1h
+    refresh-expiration: 30d
+  credentials:
+    root:
+      username: ${SPRING_ROOT_USERNAME}
+      password: ${SPRING_ROOT_PASSWORD}
+      email: ${SPRING_ROOT_EMAIL}
