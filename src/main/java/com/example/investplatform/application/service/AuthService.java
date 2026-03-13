@@ -37,13 +37,15 @@ public class AuthService {
 
     public LoginResponseDto login(LoginRequestDto request) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         AccessTokenInput accessTokenInput = accessTokenInputMapper.from(userDetails);
 
         return new LoginResponseDto(
+                accessTokenInput.userId(),
+                accessTokenInput.roles(),
                 jwtTokenFactory.generateAccessToken(accessTokenInput),
                 jwtTokenFactory.generateRefreshToken(accessTokenInput.userId())
         );
@@ -59,6 +61,8 @@ public class AuthService {
         AccessTokenInput accessTokenInput = accessTokenInputMapper.from(user);
 
         return new LoginResponseDto(
+                accessTokenInput.userId(),
+                accessTokenInput.roles(),
                 jwtTokenFactory.generateAccessToken(accessTokenInput),
                 jwtTokenFactory.generateRefreshToken(accessTokenInput.userId())
         );

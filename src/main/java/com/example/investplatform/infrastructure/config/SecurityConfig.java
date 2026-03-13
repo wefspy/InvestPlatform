@@ -25,16 +25,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
-    private final UserDetailsService userDetailsService;
-    private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
 
     @Autowired
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration,
-                          UserDetailsService userDetailsService,
-                          CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler) {
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration) {
         this.authenticationConfiguration = authenticationConfiguration;
-        this.userDetailsService = userDetailsService;
-        this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
     }
 
     /**
@@ -43,8 +37,7 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http,
-                                                      JwtAuthenticationFilter jwtAuthenticationFilter)
-            throws Exception {
+                                                      JwtAuthenticationFilter jwtAuthenticationFilter) {
         return http
                 .securityMatcher("/api/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -63,7 +56,7 @@ public class SecurityConfig {
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) {
         return http
                 .securityMatcher("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                 .csrf(AbstractHttpConfigurer::disable)
@@ -78,7 +71,7 @@ public class SecurityConfig {
      */
     @Bean
     @Order(3)
-    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) {
         return http
                 .securityMatcher("/actuator/**")
                 .csrf(AbstractHttpConfigurer::disable)
@@ -89,7 +82,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager() throws Exception {
+    public AuthenticationManager authenticationManager() {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
