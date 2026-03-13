@@ -12,6 +12,9 @@ public record LoginResponseDto(
         @Schema(description = "Список ролей пользователя")
         Set<String> roles,
 
+        @Schema(description = "Отображаемое имя: ФИО для физ. лиц / название организации для юр. лиц")
+        String displayName,
+
         @Schema(description = "Токен для доступа к закрытым REST API методам")
         String accessToken,
 

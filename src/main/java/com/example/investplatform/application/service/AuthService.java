@@ -22,17 +22,20 @@ public class AuthService {
     private final RefreshTokenParser refreshTokenParser;
     private final UserRepository userRepository;
     private final AccessTokenInputMapper accessTokenInputMapper;
+    private final UserDisplayNameResolver displayNameResolver;
 
     public AuthService(AuthenticationManager authenticationManager,
                        JwtTokenFactory jwtTokenFactory,
                        RefreshTokenParser refreshTokenParser,
                        UserRepository userRepository,
-                       AccessTokenInputMapper accessTokenInputMapper) {
+                       AccessTokenInputMapper accessTokenInputMapper,
+                       UserDisplayNameResolver displayNameResolver) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenFactory = jwtTokenFactory;
         this.refreshTokenParser = refreshTokenParser;
         this.userRepository = userRepository;
         this.accessTokenInputMapper = accessTokenInputMapper;
+        this.displayNameResolver = displayNameResolver;
     }
 
     public LoginResponseDto login(LoginRequestDto request) {
@@ -42,10 +45,12 @@ public class AuthService {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         AccessTokenInput accessTokenInput = accessTokenInputMapper.from(userDetails);
+        String displayName = displayNameResolver.resolve(accessTokenInput.userId(), accessTokenInput.roles());
 
         return new LoginResponseDto(
                 accessTokenInput.userId(),
                 accessTokenInput.roles(),
+                displayName,
                 jwtTokenFactory.generateAccessToken(accessTokenInput),
                 jwtTokenFactory.generateRefreshToken(accessTokenInput.userId())
         );
@@ -59,10 +64,12 @@ public class AuthService {
                 );
 
         AccessTokenInput accessTokenInput = accessTokenInputMapper.from(user);
+        String displayName = displayNameResolver.resolve(accessTokenInput.userId(), accessTokenInput.roles());
 
         return new LoginResponseDto(
                 accessTokenInput.userId(),
                 accessTokenInput.roles(),
+                displayName,
                 jwtTokenFactory.generateAccessToken(accessTokenInput),
                 jwtTokenFactory.generateRefreshToken(accessTokenInput.userId())
         );
