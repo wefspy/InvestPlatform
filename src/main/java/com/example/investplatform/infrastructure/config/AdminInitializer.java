@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 
 @Slf4j
 @Component
@@ -33,7 +32,7 @@ public class AdminInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         String email = rootProperties.getEmail();
 
-        if (userRepository.findByEmailWithRoles(email).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             log.info("Администратор с email '{}' уже существует, пропуск инициализации", email);
             return;
         }
@@ -49,7 +48,7 @@ public class AdminInitializer implements ApplicationRunner {
                 .isEnabled(true)
                 .isAccountNonLocked(true)
                 .is2faEnabled(false)
-                .roles(Set.of(adminRole))
+                .role(adminRole)
                 .build();
 
         userRepository.save(admin);

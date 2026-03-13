@@ -1,19 +1,5 @@
 --liquibase formatted sql
 
---changeset investplatform:001-create-users
-CREATE TABLE users (
-    id         BIGSERIAL    PRIMARY KEY,
-    email      VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    is_enabled BOOLEAN      NOT NULL DEFAULT FALSE,
-    is_account_non_locked BOOLEAN NOT NULL DEFAULT TRUE,
-    is_2fa_enabled BOOLEAN  NOT NULL DEFAULT FALSE,
-    two_fa_secret_hash VARCHAR(255),
-    created_at TIMESTAMP    NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP    NOT NULL DEFAULT now(),
-    version    BIGINT       NOT NULL DEFAULT 0
-);
-
 --changeset investplatform:001-create-roles
 CREATE TABLE roles (
     id   SERIAL      PRIMARY KEY,
@@ -26,11 +12,19 @@ INSERT INTO roles (name) VALUES
     ('ROLE_EMITENT'),
     ('ROLE_INVESTOR');
 
---changeset investplatform:001-create-user-role
-CREATE TABLE user_role (
-    user_id BIGINT  NOT NULL REFERENCES users(id),
-    role_id INTEGER NOT NULL REFERENCES roles(id),
-    PRIMARY KEY (user_id, role_id)
+--changeset investplatform:001-create-users
+CREATE TABLE users (
+    id         BIGSERIAL    PRIMARY KEY,
+    email      VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id    INTEGER      NOT NULL REFERENCES roles(id),
+    is_enabled BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_account_non_locked BOOLEAN NOT NULL DEFAULT TRUE,
+    is_2fa_enabled BOOLEAN  NOT NULL DEFAULT FALSE,
+    two_fa_secret_hash VARCHAR(255),
+    created_at TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP    NOT NULL DEFAULT now(),
+    version    BIGINT       NOT NULL DEFAULT 0
 );
 
 --changeset investplatform:001-create-operators
@@ -1268,10 +1262,6 @@ CREATE TRIGGER trg_audit_registry_operations
 
 CREATE TRIGGER trg_audit_users
     AFTER INSERT OR UPDATE OR DELETE ON users
-    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
-
-CREATE TRIGGER trg_audit_user_role
-    AFTER INSERT OR DELETE ON user_role
     FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
 
 CREATE TRIGGER trg_audit_pd_consents

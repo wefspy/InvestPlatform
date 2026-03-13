@@ -23,7 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -173,7 +172,7 @@ public class InvestorService {
     }
 
     private User createUser(String email, String password) {
-        if (userRepository.findByEmailWithRoles(email).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new UsernameAlreadyTakenException(
                     "Пользователь с email '%s' уже существует".formatted(email));
         }
@@ -188,7 +187,7 @@ public class InvestorService {
                 .isEnabled(true)
                 .isAccountNonLocked(true)
                 .is2faEnabled(false)
-                .roles(Set.of(investorRole))
+                .role(investorRole)
                 .build();
         return userRepository.save(user);
     }

@@ -16,8 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class OperatorService {
@@ -31,7 +29,7 @@ public class OperatorService {
 
     @Transactional
     public OperatorResponseDto create(CreateOperatorDto dto) {
-        if (userRepository.findByEmailWithRoles(dto.email()).isPresent()) {
+        if (userRepository.findByEmail(dto.email()).isPresent()) {
             throw new UsernameAlreadyTakenException(
                     "Пользователь с email '%s' уже существует".formatted(dto.email()));
         }
@@ -47,7 +45,7 @@ public class OperatorService {
                 .isEnabled(true)
                 .isAccountNonLocked(true)
                 .is2faEnabled(false)
-                .roles(Set.of(operatorRole))
+                .role(operatorRole)
                 .build();
         userRepository.save(user);
 

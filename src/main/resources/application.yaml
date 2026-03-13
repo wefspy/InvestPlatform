@@ -16,6 +16,7 @@ spring:
       ddl-auto: validate
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    contexts: dev
   servlet:
     multipart:
       max-file-size: 50MB
@@ -56,6 +57,5 @@ app:
     refresh-expiration: 30d
   credentials:
     root:
-      username: ${SPRING_ROOT_USERNAME}
       password: ${SPRING_ROOT_PASSWORD}
       email: ${SPRING_ROOT_EMAIL}

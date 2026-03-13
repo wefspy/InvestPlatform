@@ -53,7 +53,7 @@ public class AuthService {
 
     public LoginResponseDto refresh(String refreshToken) {
         Long userId = refreshTokenParser.getUserId(refreshToken);
-        User user = userRepository.findByIdWithRoles(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(
                         String.format("В токен зашит id %s пользователя, которого не существует", userId))
                 );

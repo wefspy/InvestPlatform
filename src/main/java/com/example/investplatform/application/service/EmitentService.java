@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -125,7 +124,7 @@ public class EmitentService {
     }
 
     private User createUser(String email, String password) {
-        if (userRepository.findByEmailWithRoles(email).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new UsernameAlreadyTakenException(
                     "Пользователь с email '%s' уже существует".formatted(email));
         }
@@ -140,7 +139,7 @@ public class EmitentService {
                 .isEnabled(true)
                 .isAccountNonLocked(true)
                 .is2faEnabled(false)
-                .roles(Set.of(emitentRole))
+                .role(emitentRole)
                 .build();
         return userRepository.save(user);
     }

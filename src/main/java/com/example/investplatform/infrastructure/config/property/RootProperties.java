@@ -10,7 +10,6 @@ import java.util.Objects;
 @Setter
 @ConfigurationProperties(prefix = "app.credentials.root")
 public class RootProperties {
-    private String username;
     private String password;
     private String email;
 }
