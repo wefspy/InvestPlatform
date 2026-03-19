@@ -737,6 +737,10 @@ CREATE TABLE investment_proposals (
     risk_warning                 TEXT           NOT NULL,
     max_investment_amount        DECIMAL(18,2)  NOT NULL CHECK (max_investment_amount > 0),
     min_investment_amount        DECIMAL(18,2)  NOT NULL CHECK (min_investment_amount > 0),
+    price_per_unit               DECIMAL(18,4)  NULL CHECK (price_per_unit > 0),
+    total_quantity               BIGINT         NULL CHECK (total_quantity > 0),
+    min_purchase_quantity        BIGINT         NULL CHECK (min_purchase_quantity > 0),
+    max_purchase_quantity        BIGINT         NULL CHECK (max_purchase_quantity > 0),
     proposal_start_date          DATE           NOT NULL,
     proposal_end_date            DATE           NOT NULL,
     essential_contract_terms     TEXT           NOT NULL,
@@ -772,6 +776,10 @@ ALTER TABLE investment_proposals ADD CONSTRAINT chk_collected_le_max
     CHECK (collected_amount <= max_investment_amount);
 ALTER TABLE investment_proposals ADD CONSTRAINT chk_dates
     CHECK (proposal_end_date > proposal_start_date);
+ALTER TABLE investment_proposals ADD CONSTRAINT chk_min_purchase_le_max_purchase
+    CHECK (min_purchase_quantity <= max_purchase_quantity);
+ALTER TABLE investment_proposals ADD CONSTRAINT chk_max_purchase_le_total
+    CHECK (max_purchase_quantity <= total_quantity);
 
 --changeset investplatform:001-create-proposal-status-history
 CREATE TABLE proposal_status_history (

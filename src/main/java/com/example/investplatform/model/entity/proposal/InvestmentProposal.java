@@ -107,6 +107,18 @@ public class InvestmentProposal {
     @Column(name = "suspensive_conditions", columnDefinition = "text")
     private String suspensiveConditions;
 
+    @Column(name = "price_per_unit", precision = 18, scale = 4)
+    private BigDecimal pricePerUnit;
+
+    @Column(name = "total_quantity")
+    private Long totalQuantity;
+
+    @Column(name = "min_purchase_quantity")
+    private Long minPurchaseQuantity;
+
+    @Column(name = "max_purchase_quantity")
+    private Long maxPurchaseQuantity;
+
     @Column(name = "collected_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal collectedAmount;
 

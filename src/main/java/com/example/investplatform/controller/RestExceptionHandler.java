@@ -13,6 +13,7 @@ import com.example.investplatform.application.exception.InvestmentContractNotFou
 import com.example.investplatform.application.exception.InsufficientFundsException;
 import com.example.investplatform.application.exception.ContractWithdrawalException;
 import io.jsonwebtoken.JwtException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -268,6 +269,17 @@ public class RestExceptionHandler {
                 exception,
                 exception.getMessage(),
                 HttpStatus.BAD_REQUEST,
+                request
+        );
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiErrorDto> exception(EntityNotFoundException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND,
                 request
         );
     }

@@ -81,6 +81,10 @@ public class InvestmentProposalService {
                 .riskWarning(dto.riskWarning())
                 .maxInvestmentAmount(dto.maxInvestmentAmount())
                 .minInvestmentAmount(dto.minInvestmentAmount())
+                .pricePerUnit(dto.pricePerUnit())
+                .totalQuantity(dto.totalQuantity())
+                .minPurchaseQuantity(dto.minPurchaseQuantity())
+                .maxPurchaseQuantity(dto.maxPurchaseQuantity())
                 .proposalStartDate(dto.proposalStartDate())
                 .proposalEndDate(dto.proposalEndDate())
                 .essentialContractTerms(dto.essentialContractTerms())
@@ -123,6 +127,10 @@ public class InvestmentProposalService {
         if (dto.riskWarning() != null) proposal.setRiskWarning(dto.riskWarning());
         if (dto.maxInvestmentAmount() != null) proposal.setMaxInvestmentAmount(dto.maxInvestmentAmount());
         if (dto.minInvestmentAmount() != null) proposal.setMinInvestmentAmount(dto.minInvestmentAmount());
+        if (dto.pricePerUnit() != null) proposal.setPricePerUnit(dto.pricePerUnit());
+        if (dto.totalQuantity() != null) proposal.setTotalQuantity(dto.totalQuantity());
+        if (dto.minPurchaseQuantity() != null) proposal.setMinPurchaseQuantity(dto.minPurchaseQuantity());
+        if (dto.maxPurchaseQuantity() != null) proposal.setMaxPurchaseQuantity(dto.maxPurchaseQuantity());
         if (dto.proposalStartDate() != null) proposal.setProposalStartDate(dto.proposalStartDate());
         if (dto.proposalEndDate() != null) proposal.setProposalEndDate(dto.proposalEndDate());
         if (dto.essentialContractTerms() != null) proposal.setEssentialContractTerms(dto.essentialContractTerms());
@@ -475,6 +483,10 @@ public class InvestmentProposalService {
                 p.getRiskWarning(),
                 p.getMaxInvestmentAmount(),
                 p.getMinInvestmentAmount(),
+                p.getPricePerUnit(),
+                p.getTotalQuantity(),
+                p.getMinPurchaseQuantity(),
+                p.getMaxPurchaseQuantity(),
                 p.getProposalStartDate(),
                 p.getProposalEndDate(),
                 p.getEssentialContractTerms(),
@@ -503,6 +515,8 @@ public class InvestmentProposalService {
                 p.getTitle(),
                 p.getMaxInvestmentAmount(),
                 p.getMinInvestmentAmount(),
+                p.getPricePerUnit(),
+                p.getTotalQuantity(),
                 p.getCollectedAmount(),
                 p.getProposalStartDate(),
                 p.getProposalEndDate(),

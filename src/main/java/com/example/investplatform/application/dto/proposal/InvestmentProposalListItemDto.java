@@ -12,6 +12,8 @@ public record InvestmentProposalListItemDto(
         String title,
         BigDecimal maxInvestmentAmount,
         BigDecimal minInvestmentAmount,
+        BigDecimal pricePerUnit,
+        Long totalQuantity,
         BigDecimal collectedAmount,
         LocalDate proposalStartDate,
         LocalDate proposalEndDate,

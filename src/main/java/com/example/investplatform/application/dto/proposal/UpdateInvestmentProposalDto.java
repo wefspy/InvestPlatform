@@ -38,6 +38,18 @@ public record UpdateInvestmentProposalDto(
         @DecimalMin(value = "0.01", message = "Минимальная сумма инвестирования должна быть больше 0")
         BigDecimal minInvestmentAmount,
 
+        @DecimalMin(value = "0.0001", message = "Цена за одну ценную бумагу должна быть больше 0")
+        BigDecimal pricePerUnit,
+
+        @Min(value = 1, message = "Общее количество ценных бумаг должно быть больше 0")
+        Long totalQuantity,
+
+        @Min(value = 1, message = "Минимальное количество для покупки должно быть больше 0")
+        Long minPurchaseQuantity,
+
+        @Min(value = 1, message = "Максимальное количество для покупки должно быть больше 0")
+        Long maxPurchaseQuantity,
+
         LocalDate proposalStartDate,
 
         LocalDate proposalEndDate,

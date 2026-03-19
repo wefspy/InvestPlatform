@@ -38,14 +38,14 @@ SELECT setval('operators_id_seq', (SELECT MAX(id) FROM operators));
 --changeset investplatform:002-mock-personal-accounts
 -- Emitent accounts (account_type 01 = Счёт владельца)
 INSERT INTO personal_accounts (id, account_number, account_type_id, balance, hold_amount) VALUES
-    (200, 'EM-2024-000001', 1, 1500000.00, 0.00),
-    (201, 'EM-2024-000002', 1,  350000.00, 0.00);
+    (200, 'EM-2025-000001', 1, 1500000.00, 0.00),
+    (201, 'EM-2025-000002', 1,  350000.00, 0.00);
 
 -- Investor accounts
 INSERT INTO personal_accounts (id, account_number, account_type_id, balance, hold_amount) VALUES
-    (300, 'IN-2024-000001', 1, 500000.00,  50000.00),
-    (301, 'IN-2024-000002', 1, 250000.00,       0.00),
-    (302, 'IN-2024-000003', 1, 3000000.00, 200000.00);
+    (300, 'IN-2025-000001', 1, 500000.00,  50000.00),
+    (301, 'IN-2025-000002', 1, 250000.00,       0.00),
+    (302, 'IN-2025-000003', 1, 3000000.00, 200000.00);
 
 SELECT setval('personal_accounts_id_seq', (SELECT MAX(id) FROM personal_accounts));
 
@@ -132,9 +132,9 @@ INSERT INTO emitent_okved (emitent_id, okved_id, is_primary) VALUES
 
 --changeset investplatform:002-mock-investors
 INSERT INTO investors (id, user_id, investor_type, personal_account_id, is_qualified, qualified_at, qualified_basis, risk_declaration_accepted, risk_accepted_at) VALUES
-    (300, 300, 'INDIVIDUAL',            300, FALSE, NULL,                       NULL,                          TRUE,  '2025-06-01 10:00:00'),
-    (301, 301, 'PRIVATE_ENTREPRENEUR',  301, FALSE, NULL,                       NULL,                          TRUE,  '2025-07-15 14:30:00'),
-    (302, 302, 'LEGAL_ENTITY',          302, TRUE,  '2025-05-20 09:00:00',      'Квалифицированный инвестор по п.2 ст.51.2 ФЗ-39', TRUE, '2025-05-20 09:00:00');
+    (300, 300, 'INDIVIDUAL',            300, FALSE, NULL,                       NULL,                          TRUE,  '2025-12-01 10:00:00'),
+    (301, 301, 'PRIVATE_ENTREPRENEUR',  301, FALSE, NULL,                       NULL,                          TRUE,  '2026-01-15 14:30:00'),
+    (302, 302, 'LEGAL_ENTITY',          302, TRUE,  '2025-11-20 09:00:00',      'Квалифицированный инвестор по п.2 ст.51.2 ФЗ-39', TRUE, '2025-11-20 09:00:00');
 
 SELECT setval('investors_id_seq', (SELECT MAX(id) FROM investors));
 
@@ -240,7 +240,7 @@ INSERT INTO securities (id, securities_code, security_classification_id, securit
     (1, 'TINV-001',
      1, 1,
      'Обыкновенная акция',
-     '1-01-12345-А', '2024-01-15',
+     '1-01-12345-А', '2025-07-15',
      'RU000A106K11',
      'RUB', 100.0000, 100000.0000, 25000.0000,
      'именная', 'ESVUFR', 'EQUITY',
@@ -248,7 +248,7 @@ INSERT INTO securities (id, securities_code, security_classification_id, securit
     (2, 'TINV-002',
      2, 3,
      'Облигация купонная',
-     '4-01-12345-А', '2024-06-01',
+     '4-01-12345-А', '2025-10-01',
      'RU000A107B22',
      'RUB', 1000.0000, 50000.0000, 10000.0000,
      'именная', 'DBFUFR', 'BOND',
@@ -256,7 +256,7 @@ INSERT INTO securities (id, securities_code, security_classification_id, securit
     (3, 'PETR-001',
      1, 1,
      'Обыкновенная акция',
-     '1-02-67890-А', '2025-03-10',
+     '1-02-67890-А', '2025-11-10',
      'RU000A108C33',
      'RUB', 500.0000, 20000.0000, 5000.0000,
      'именная', 'ESVUFR', 'EQUITY',
@@ -272,7 +272,9 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
     investment_goals, goal_risk_factors, emitent_risks, investment_risks,
     issue_decision_info, placement_procedure, placement_terms, placement_conditions,
     has_preemptive_right, risk_warning,
-    max_investment_amount, min_investment_amount, proposal_start_date, proposal_end_date,
+    max_investment_amount, min_investment_amount,
+    price_per_unit, total_quantity, min_purchase_quantity, max_purchase_quantity,
+    proposal_start_date, proposal_end_date,
     essential_contract_terms, applicable_law, collected_amount,
     reviewed_by, submitted_at, reviewed_at, activated_at) VALUES
     (1, 200, 5, 1, 1,
@@ -281,25 +283,28 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
      'Неуспешное масштабирование продукта, изменение рыночной конъюнктуры, появление конкурентов с аналогичным продуктом.',
      'Риск потери ключевых сотрудников, зависимость от единственного продукта, ограниченная история операционной деятельности.',
      'Риск невозврата инвестиций, риск размытия доли при последующих раундах, отсутствие дивидендной политики на ранней стадии.',
-     'Решение единственного участника №5 от 10.01.2025 о размещении дополнительных акций.',
+     'Решение единственного участника №5 от 10.06.2025 о размещении дополнительных акций.',
      'Размещение осуществляется через инвестиционную платформу путём заключения договоров инвестирования.',
-     'Срок размещения — 90 дней с момента публикации. Акции размещаются по номинальной стоимости 100 руб. за акцию.',
+     'Срок размещения — 120 дней с момента публикации. Акции размещаются по номинальной стоимости 100 руб. за акцию.',
      'Размещение акций на условиях, указанных в решении о выпуске.',
      FALSE,
      'ВНИМАНИЕ: Инвестирование в ценные бумаги сопряжено с риском потери всей суммы инвестиций. Перед принятием решения внимательно ознакомьтесь с рисками.',
      10000000.00, 10000.00,
-     '2025-09-01', '2025-12-01',
+     100.0000, 100000, 100, 100000,
+     '2026-02-01', '2026-06-01',
      'Инвестор приобретает обыкновенные именные акции по цене 100 руб. за акцию. Минимальная сумма инвестирования — 10 000 руб.',
      'Российская Федерация',
      2500000.00,
      100,
-     '2025-08-20 09:00:00', '2025-08-25 14:00:00', '2025-09-01 00:00:00');
+     '2026-01-20 09:00:00', '2026-01-25 14:00:00', '2026-02-01 00:00:00');
 
 -- Draft proposal (ООО ТехноИнвест — облигации)
 INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_id, security_id, title,
     investment_goals, goal_risk_factors, emitent_risks, investment_risks,
     risk_warning,
-    max_investment_amount, min_investment_amount, proposal_start_date, proposal_end_date,
+    max_investment_amount, min_investment_amount,
+    price_per_unit, total_quantity, min_purchase_quantity, max_purchase_quantity,
+    proposal_start_date, proposal_end_date,
     essential_contract_terms, applicable_law, collected_amount) VALUES
     (2, 200, 1, 1, 2,
      'Облигационный заём ООО "ТехноИнвест" — купонные облигации',
@@ -309,7 +314,8 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
      'Процентный риск, риск дефолта эмитента, риск невозможности досрочного погашения.',
      'Инвестирование связано с риском потери инвестированных средств. Эмитент не гарантирует доходность вложений.',
      25000000.00, 50000.00,
-     '2026-01-15', '2026-04-15',
+     1000.0000, 50000, 50, 25000,
+     '2026-05-01', '2026-08-01',
      'Купонная облигация номиналом 1000 руб. Купонный период — 6 месяцев. Ставка купона — 14% годовых.',
      'Российская Федерация',
      0.00);
@@ -318,7 +324,9 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
 INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_id, security_id, title,
     investment_goals, goal_risk_factors, emitent_risks, investment_risks,
     risk_warning,
-    max_investment_amount, min_investment_amount, proposal_start_date, proposal_end_date,
+    max_investment_amount, min_investment_amount,
+    price_per_unit, total_quantity, min_purchase_quantity, max_purchase_quantity,
+    proposal_start_date, proposal_end_date,
     essential_contract_terms, applicable_law, collected_amount,
     reviewed_by, submitted_at, reviewed_at, activated_at) VALUES
     (3, 201, 5, 1, 3,
@@ -329,12 +337,13 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
      'Операционные риски малого бизнеса, зависимость от ограниченного числа поставщиков.',
      'Инвестиции не застрахованы. Существует риск полной потери вложенных средств.',
      5000000.00, 5000.00,
-     '2025-10-01', '2026-01-01',
+     500.0000, 20000, 10, 10000,
+     '2026-03-01', '2026-06-30',
      'Инвестор приобретает обыкновенные именные акции по цене 500 руб. за акцию. Минимальная сумма инвестирования — 5 000 руб.',
      'Российская Федерация',
      750000.00,
      101,
-     '2025-09-10 11:00:00', '2025-09-15 16:00:00', '2025-10-01 00:00:00');
+     '2026-02-10 11:00:00', '2026-02-15 16:00:00', '2026-03-01 00:00:00');
 
 -- Rejected proposal
 INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_id, title,
@@ -351,13 +360,13 @@ INSERT INTO investment_proposals (id, emitent_id, status_id, investment_method_i
      'Ранняя стадия проекта, высокая степень неопределённости.',
      'Крайне высокий уровень риска. Проект находится на стадии идеи.',
      3000000.00, 10000.00,
-     '2025-06-01', '2025-09-01',
+     '2025-12-01', '2026-03-01',
      'Договор займа с конвертацией в долю.',
      'Российская Федерация',
      0.00,
      100,
      'Недостаточно проработан бизнес-план. Отсутствуют финансовые прогнозы и анализ рынка. Необходимо доработать документацию и предоставить MVP продукта.',
-     '2025-05-01 10:00:00', '2025-05-10 15:00:00');
+     '2025-11-01 10:00:00', '2025-11-10 15:00:00');
 
 SELECT setval('investment_proposals_id_seq', (SELECT MAX(id) FROM investment_proposals));
 
@@ -382,15 +391,15 @@ INSERT INTO proposal_status_history (proposal_id, old_status_id, new_status_id, 
 --changeset investplatform:002-mock-payments
 INSERT INTO payments (id, yukassa_payment_id, personal_account_id, payment_type, direction, amount, currency, yukassa_status, payment_method_type, description, idempotency_key, paid_at) VALUES
     -- Investor 300 (Сидорова) deposits
-    (1, 'pay_2a1b3c4d-0001', 300, 'DEPOSIT', 'INBOUND', 300000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-001', '2025-08-01 10:15:00'),
-    (2, 'pay_2a1b3c4d-0002', 300, 'DEPOSIT', 'INBOUND', 250000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-002', '2025-09-10 12:00:00'),
+    (1, 'pay_2a1b3c4d-0001', 300, 'DEPOSIT', 'INBOUND', 300000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-001', '2026-01-01 10:15:00'),
+    (2, 'pay_2a1b3c4d-0002', 300, 'DEPOSIT', 'INBOUND', 250000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-002', '2026-02-10 12:00:00'),
     -- Investor 301 (Волков) deposit
-    (3, 'pay_2a1b3c4d-0003', 301, 'DEPOSIT', 'INBOUND', 250000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-003', '2025-07-20 09:30:00'),
+    (3, 'pay_2a1b3c4d-0003', 301, 'DEPOSIT', 'INBOUND', 250000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-003', '2026-01-20 09:30:00'),
     -- Investor 302 (АО ИнвестГрупп) deposits
-    (4, 'pay_2a1b3c4d-0004', 302, 'DEPOSIT', 'INBOUND', 2000000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-004', '2025-06-01 08:00:00'),
-    (5, 'pay_2a1b3c4d-0005', 302, 'DEPOSIT', 'INBOUND', 1200000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-005', '2025-09-05 14:20:00'),
+    (4, 'pay_2a1b3c4d-0004', 302, 'DEPOSIT', 'INBOUND', 2000000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-004', '2025-12-01 08:00:00'),
+    (5, 'pay_2a1b3c4d-0005', 302, 'DEPOSIT', 'INBOUND', 1200000.00, 'RUB', 'succeeded', 'bank_card', 'Пополнение счёта', 'idem-pay-005', '2026-02-05 14:20:00'),
     -- Emitent 200 deposit (from completed proposals)
-    (6, 'pay_2a1b3c4d-0006', 200, 'TRANSFER', 'INBOUND', 1500000.00, 'RUB', 'succeeded', 'internal', 'Перевод средств по ИП №1', 'idem-pay-006', '2025-10-01 12:00:00');
+    (6, 'pay_2a1b3c4d-0006', 200, 'TRANSFER', 'INBOUND', 1500000.00, 'RUB', 'succeeded', 'internal', 'Перевод средств по ИП №1', 'idem-pay-006', '2026-03-01 12:00:00');
 
 SELECT setval('payments_id_seq', (SELECT MAX(id) FROM payments));
 
@@ -410,12 +419,12 @@ INSERT INTO account_transactions (personal_account_id, transaction_type, amount,
 
 -- Active contracts for proposal 1 (ТехноИнвест акции)
 INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, payment_id, signed_at, reviewed_at, created_at) VALUES
-    (1, 'DI-2025-000001', 1, 300, 4, 50000.00, 1, 500.0000, 100.0000, 100, 2, '2025-09-15 10:00:00', '2025-09-16 11:00:00', '2025-09-15 10:00:00'),
-    (2, 'DI-2025-000002', 1, 302, 4, 200000.00, 1, 2000.0000, 100.0000, 100, 5, '2025-09-20 15:00:00', '2025-09-21 10:00:00', '2025-09-20 15:00:00');
+    (1, 'DI-2026-000001', 1, 300, 4, 50000.00, 1, 500.0000, 100.0000, 100, 2, '2026-02-15 10:00:00', '2026-02-16 11:00:00', '2026-02-15 10:00:00'),
+    (2, 'DI-2026-000002', 1, 302, 4, 200000.00, 1, 2000.0000, 100.0000, 100, 5, '2026-02-20 15:00:00', '2026-02-21 10:00:00', '2026-02-20 15:00:00');
 
 -- Contract for proposal 3 (ЭкоПак)
 INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, payment_id, signed_at, reviewed_at, created_at) VALUES
-    (3, 'DI-2025-000003', 3, 300, 1, 50000.00, 3, 100.0000, 500.0000, NULL, NULL, '2025-10-05 09:00:00', NULL, '2025-10-05 09:00:00');
+    (3, 'DI-2026-000003', 3, 300, 1, 50000.00, 3, 100.0000, 500.0000, NULL, NULL, '2026-03-05 09:00:00', NULL, '2026-03-05 09:00:00');
 
 SELECT setval('investment_contracts_id_seq', (SELECT MAX(id) FROM investment_contracts));
 
@@ -439,12 +448,12 @@ SELECT setval('security_balances_id_seq', (SELECT MAX(id) FROM security_balances
 
 --changeset investplatform:002-mock-emitent-documents
 INSERT INTO emitent_documents (id, emitent_id, document_type_id, report_year, file_name, file_path, file_size, mime_type) VALUES
-    (1, 200, 1, 2024, 'technoinvest_fin_report_2024.pdf',  'emitents/200/financial_report_2024.pdf',  2048576, 'application/pdf'),
-    (2, 200, 2, 2024, 'technoinvest_audit_2024.pdf',       'emitents/200/audit_conclusion_2024.pdf',  1536000, 'application/pdf'),
-    (3, 200, 3, 2024, 'technoinvest_charter.pdf',          'emitents/200/charter.pdf',                 512000, 'application/pdf'),
-    (4, 200, 4, 2024, 'technoinvest_egrul.pdf',            'emitents/200/egrul_extract_2024.pdf',      256000, 'application/pdf'),
-    (5, 201, 1, 2024, 'ecopak_fin_report_2024.pdf',        'emitents/201/financial_report_2024.pdf',   768000, 'application/pdf'),
-    (6, 201, 4, 2024, 'ecopak_egrip.pdf',                  'emitents/201/egrip_extract_2024.pdf',      128000, 'application/pdf');
+    (1, 200, 1, 2025, 'technoinvest_fin_report_2025.pdf',  'emitents/200/financial_report_2025.pdf',  2048576, 'application/pdf'),
+    (2, 200, 2, 2025, 'technoinvest_audit_2025.pdf',       'emitents/200/audit_conclusion_2025.pdf',  1536000, 'application/pdf'),
+    (3, 200, 3, 2025, 'technoinvest_charter.pdf',          'emitents/200/charter.pdf',                 512000, 'application/pdf'),
+    (4, 200, 4, 2025, 'technoinvest_egrul.pdf',            'emitents/200/egrul_extract_2025.pdf',      256000, 'application/pdf'),
+    (5, 201, 1, 2025, 'ecopak_fin_report_2025.pdf',        'emitents/201/financial_report_2025.pdf',   768000, 'application/pdf'),
+    (6, 201, 4, 2025, 'ecopak_egrip.pdf',                  'emitents/201/egrip_extract_2025.pdf',      128000, 'application/pdf');
 
 SELECT setval('emitent_documents_id_seq', (SELECT MAX(id) FROM emitent_documents));
 
@@ -467,12 +476,12 @@ SELECT setval('investor_documents_id_seq', (SELECT MAX(id) FROM investor_documen
 --changeset investplatform:002-mock-proposal-documents
 INSERT INTO proposal_documents (id, proposal_id, document_type_id, file_name, file_path, file_size, mime_type) VALUES
     -- Proposal 1 (ТехноИнвест акции)
-    (1, 1, 1, 'technoinvest_fin_2024.pdf',        'proposals/1/financial_report.pdf',       2048576, 'application/pdf'),
+    (1, 1, 1, 'technoinvest_fin_2025.pdf',        'proposals/1/financial_report.pdf',       2048576, 'application/pdf'),
     (2, 1, 3, 'technoinvest_issue_decision.pdf',   'proposals/1/issue_decision.pdf',         512000, 'application/pdf'),
     (3, 1, 6, 'technoinvest_draft_contract.pdf',   'proposals/1/draft_contract.pdf',        1024000, 'application/pdf'),
     (4, 1, 7, 'technoinvest_risk_warning.pdf',     'proposals/1/risk_warning.pdf',           384000, 'application/pdf'),
     -- Proposal 3 (ЭкоПак)
-    (5, 3, 1, 'ecopak_fin_2024.pdf',              'proposals/3/financial_report.pdf',        768000, 'application/pdf'),
+    (5, 3, 1, 'ecopak_fin_2025.pdf',              'proposals/3/financial_report.pdf',        768000, 'application/pdf'),
     (6, 3, 6, 'ecopak_draft_contract.pdf',         'proposals/3/draft_contract.pdf',         640000, 'application/pdf'),
     (7, 3, 7, 'ecopak_risk_warning.pdf',           'proposals/3/risk_warning.pdf',           256000, 'application/pdf');
 
@@ -480,64 +489,64 @@ SELECT setval('proposal_documents_id_seq', (SELECT MAX(id) FROM proposal_documen
 
 --changeset investplatform:002-mock-pd-consent-versions
 INSERT INTO pd_consent_versions (id, consent_type_id, version_number, content, effective_from) VALUES
-    (1, 1, 1, 'Я даю согласие на обработку моих персональных данных для создания учётной записи, идентификации и аутентификации на инвестиционной платформе в соответствии с ФЗ-152 «О персональных данных».', '2025-01-01'),
-    (2, 2, 1, 'Я даю согласие на обработку моих персональных данных в рамках инвестиционной деятельности, включая заключение и исполнение договоров инвестирования, ведение реестра владельцев ценных бумаг.', '2025-01-01'),
-    (3, 3, 1, 'Я даю согласие на передачу моих персональных данных в Банк России и иные уполномоченные органы в соответствии с ФЗ-259 «О привлечении инвестиций с использованием инвестиционных платформ».', '2025-01-01'),
-    (4, 4, 1, 'Я даю согласие на получение информационных и рекламных материалов по электронной почте и SMS.', '2025-01-01'),
-    (5, 5, 1, 'Я даю согласие на трансграничную передачу моих персональных данных в юрисдикции, обеспечивающие адекватную защиту прав субъектов персональных данных.', '2025-01-01');
+    (1, 1, 1, 'Я даю согласие на обработку моих персональных данных для создания учётной записи, идентификации и аутентификации на инвестиционной платформе в соответствии с ФЗ-152 «О персональных данных».', '2025-09-01'),
+    (2, 2, 1, 'Я даю согласие на обработку моих персональных данных в рамках инвестиционной деятельности, включая заключение и исполнение договоров инвестирования, ведение реестра владельцев ценных бумаг.', '2025-09-01'),
+    (3, 3, 1, 'Я даю согласие на передачу моих персональных данных в Банк России и иные уполномоченные органы в соответствии с ФЗ-259 «О привлечении инвестиций с использованием инвестиционных платформ».', '2025-09-01'),
+    (4, 4, 1, 'Я даю согласие на получение информационных и рекламных материалов по электронной почте и SMS.', '2025-09-01'),
+    (5, 5, 1, 'Я даю согласие на трансграничную передачу моих персональных данных в юрисдикции, обеспечивающие адекватную защиту прав субъектов персональных данных.', '2025-09-01');
 
 SELECT setval('pd_consent_versions_id_seq', (SELECT MAX(id) FROM pd_consent_versions));
 
 --changeset investplatform:002-mock-pd-consents
 INSERT INTO pd_consents (user_id, consent_version_id, status, accepted_at, ip_address, user_agent) VALUES
     -- Investor 300 (Сидорова) — все обязательные + маркетинг
-    (300, 1, 'ACTIVE', '2025-06-01 10:00:00', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
-    (300, 2, 'ACTIVE', '2025-06-01 10:00:30', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
-    (300, 3, 'ACTIVE', '2025-06-01 10:01:00', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
-    (300, 4, 'ACTIVE', '2025-06-01 10:01:30', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
+    (300, 1, 'ACTIVE', '2025-12-01 10:00:00', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
+    (300, 2, 'ACTIVE', '2025-12-01 10:00:30', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
+    (300, 3, 'ACTIVE', '2025-12-01 10:01:00', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
+    (300, 4, 'ACTIVE', '2025-12-01 10:01:30', '192.168.1.100', 'Mozilla/5.0 Chrome/120'),
     -- Investor 301 (Волков) — только обязательные
-    (301, 1, 'ACTIVE', '2025-07-15 14:30:00', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
-    (301, 2, 'ACTIVE', '2025-07-15 14:30:30', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
-    (301, 3, 'ACTIVE', '2025-07-15 14:31:00', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
+    (301, 1, 'ACTIVE', '2026-01-15 14:30:00', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
+    (301, 2, 'ACTIVE', '2026-01-15 14:30:30', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
+    (301, 3, 'ACTIVE', '2026-01-15 14:31:00', '10.0.0.50', 'Mozilla/5.0 Firefox/119'),
     -- Investor 302 (АО ИнвестГрупп)
-    (302, 1, 'ACTIVE', '2025-05-20 09:00:00', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
-    (302, 2, 'ACTIVE', '2025-05-20 09:00:30', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
-    (302, 3, 'ACTIVE', '2025-05-20 09:01:00', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
+    (302, 1, 'ACTIVE', '2025-11-20 09:00:00', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
+    (302, 2, 'ACTIVE', '2025-11-20 09:00:30', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
+    (302, 3, 'ACTIVE', '2025-11-20 09:01:00', '172.16.0.10', 'Mozilla/5.0 Edge/120'),
     -- Emitent 200 (ТехноИнвест)
-    (200, 1, 'ACTIVE', '2025-04-01 08:00:00', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
-    (200, 2, 'ACTIVE', '2025-04-01 08:00:30', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
-    (200, 3, 'ACTIVE', '2025-04-01 08:01:00', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
+    (200, 1, 'ACTIVE', '2025-10-01 08:00:00', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
+    (200, 2, 'ACTIVE', '2025-10-01 08:00:30', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
+    (200, 3, 'ACTIVE', '2025-10-01 08:01:00', '192.168.0.10', 'Mozilla/5.0 Chrome/120'),
     -- Emitent 201 (Петров)
-    (201, 1, 'ACTIVE', '2025-04-15 11:00:00', '192.168.0.20', 'Mozilla/5.0 Safari/17'),
-    (201, 2, 'ACTIVE', '2025-04-15 11:00:30', '192.168.0.20', 'Mozilla/5.0 Safari/17'),
-    (201, 3, 'ACTIVE', '2025-04-15 11:01:00', '192.168.0.20', 'Mozilla/5.0 Safari/17');
+    (201, 1, 'ACTIVE', '2025-10-15 11:00:00', '192.168.0.20', 'Mozilla/5.0 Safari/17'),
+    (201, 2, 'ACTIVE', '2025-10-15 11:00:30', '192.168.0.20', 'Mozilla/5.0 Safari/17'),
+    (201, 3, 'ACTIVE', '2025-10-15 11:01:00', '192.168.0.20', 'Mozilla/5.0 Safari/17');
 
 --changeset investplatform:002-mock-registry-operations
 -- Registry operations for placed securities
 INSERT INTO registry_operations (id, operation_type_id, operation_name, operation_kind, processing_datetime, processing_reference, date_state, account_transfer_id, account_receive_id, security_id, quantity, settlement_currency, settlement_amount, content) VALUES
     -- Placement of TINV-001 shares
     (1, 8, 'Размещение акций TINV-001 (ООО ТехноИнвест)', 'EMISSION',
-     '2025-01-20 10:00:00', 'REG-2025-0001', '2025-01-20',
+     '2025-08-20 10:00:00', 'REG-2025-0001', '2025-08-20',
      NULL, 200, 1, 25000.0000, 'RUB', 2500000.00,
      'Первичное размещение обыкновенных именных акций по решению о выпуске.'),
     -- Transfer to investor 300 (Сидорова)
     (2, 1, 'Переход прав на акции TINV-001 к инвестору Сидорова Е.А.', 'TRANSACTION',
-     '2025-09-16 12:00:00', 'REG-2025-0002', '2025-09-16',
+     '2026-02-16 12:00:00', 'REG-2026-0001', '2026-02-16',
      200, 300, 1, 500.0000, 'RUB', 50000.00,
-     'Перевод акций по договору инвестирования DI-2025-000001.'),
+     'Перевод акций по договору инвестирования DI-2026-000001.'),
     -- Transfer to investor 302 (АО ИнвестГрупп)
     (3, 1, 'Переход прав на акции TINV-001 к АО "ИнвестГрупп"', 'TRANSACTION',
-     '2025-09-21 11:00:00', 'REG-2025-0003', '2025-09-21',
+     '2026-02-21 11:00:00', 'REG-2026-0002', '2026-02-21',
      200, 302, 1, 2000.0000, 'RUB', 200000.00,
-     'Перевод акций по договору инвестирования DI-2025-000002.'),
+     'Перевод акций по договору инвестирования DI-2026-000002.'),
     -- Placement of TINV-002 bonds
     (4, 8, 'Размещение облигаций TINV-002 (ООО ТехноИнвест)', 'EMISSION',
-     '2025-06-10 10:00:00', 'REG-2025-0004', '2025-06-10',
+     '2025-11-10 10:00:00', 'REG-2025-0002', '2025-11-10',
      NULL, 200, 2, 10000.0000, 'RUB', 10000000.00,
      'Размещение купонных облигаций.'),
     -- Placement of PETR-001 shares
     (5, 8, 'Размещение акций PETR-001 (ИП Петров А.Н.)', 'EMISSION',
-     '2025-03-15 10:00:00', 'REG-2025-0005', '2025-03-15',
+     '2025-12-15 10:00:00', 'REG-2025-0003', '2025-12-15',
      NULL, 201, 3, 5000.0000, 'RUB', 2500000.00,
      'Первичное размещение обыкновенных именных акций.');
 
@@ -545,28 +554,28 @@ SELECT setval('registry_operations_id_seq', (SELECT MAX(id) FROM registry_operat
 
 --changeset investplatform:002-mock-registry-operation-documents
 INSERT INTO registry_operation_documents (id, registry_operation_id, in_doc_num, in_reg_date, out_doc_num, out_doc_date) VALUES
-    (1, 1, 'ВХ-2025-001', '2025-01-19 09:00:00', 'ИСХ-2025-001', '2025-01-20 10:00:00'),
-    (2, 2, 'ВХ-2025-002', '2025-09-15 10:00:00', 'ИСХ-2025-002', '2025-09-16 12:00:00'),
-    (3, 3, 'ВХ-2025-003', '2025-09-20 15:00:00', 'ИСХ-2025-003', '2025-09-21 11:00:00'),
-    (4, 4, 'ВХ-2025-004', '2025-06-09 09:00:00', 'ИСХ-2025-004', '2025-06-10 10:00:00'),
-    (5, 5, 'ВХ-2025-005', '2025-03-14 09:00:00', 'ИСХ-2025-005', '2025-03-15 10:00:00');
+    (1, 1, 'ВХ-2025-001', '2025-08-19 09:00:00', 'ИСХ-2025-001', '2025-08-20 10:00:00'),
+    (2, 2, 'ВХ-2026-001', '2026-02-15 10:00:00', 'ИСХ-2026-001', '2026-02-16 12:00:00'),
+    (3, 3, 'ВХ-2026-002', '2026-02-20 15:00:00', 'ИСХ-2026-002', '2026-02-21 11:00:00'),
+    (4, 4, 'ВХ-2025-002', '2025-11-09 09:00:00', 'ИСХ-2025-002', '2025-11-10 10:00:00'),
+    (5, 5, 'ВХ-2025-003', '2025-12-14 09:00:00', 'ИСХ-2025-003', '2025-12-15 10:00:00');
 
 SELECT setval('registry_operation_documents_id_seq', (SELECT MAX(id) FROM registry_operation_documents));
 
 --changeset investplatform:002-mock-notifications
 INSERT INTO notifications (user_id, event_type_id, channel_id, entity_type, entity_id, title, body, delivery_status, is_read, read_at, sent_at, delivered_at) VALUES
     -- Emitent 200: proposal approved
-    (200, 2, 1, 'investment_proposal', 1, 'ИП одобрено', 'Ваше инвестиционное предложение "Размещение акций ООО ТехноИнвест — серия А" одобрено оператором и будет опубликовано.', 'DELIVERED', TRUE, '2025-08-25 15:00:00', '2025-08-25 14:00:00', '2025-08-25 14:00:05'),
+    (200, 2, 1, 'investment_proposal', 1, 'ИП одобрено', 'Ваше инвестиционное предложение "Размещение акций ООО ТехноИнвест — серия А" одобрено оператором и будет опубликовано.', 'DELIVERED', TRUE, '2026-01-25 15:00:00', '2026-01-25 14:00:00', '2026-01-25 14:00:05'),
     -- Emitent 200: proposal rejected
-    (200, 3, 1, 'investment_proposal', 4, 'ИП отклонено', 'Ваше инвестиционное предложение "Пилотный проект IoT-мониторинга" отклонено. Причина: недостаточно проработан бизнес-план.', 'DELIVERED', TRUE, '2025-05-10 16:00:00', '2025-05-10 15:00:00', '2025-05-10 15:00:05'),
+    (200, 3, 1, 'investment_proposal', 4, 'ИП отклонено', 'Ваше инвестиционное предложение "Пилотный проект IoT-мониторинга" отклонено. Причина: недостаточно проработан бизнес-план.', 'DELIVERED', TRUE, '2025-11-10 16:00:00', '2025-11-10 15:00:00', '2025-11-10 15:00:05'),
     -- Investor 300: contract approved
-    (300, 8, 1, 'investment_contract', 1, 'ДИ одобрен', 'Ваш договор инвестирования DI-2025-000001 одобрен оператором.', 'DELIVERED', TRUE, '2025-09-16 12:00:00', '2025-09-16 11:00:00', '2025-09-16 11:00:05'),
+    (300, 8, 1, 'investment_contract', 1, 'ДИ одобрен', 'Ваш договор инвестирования DI-2026-000001 одобрен оператором.', 'DELIVERED', TRUE, '2026-02-16 12:00:00', '2026-02-16 11:00:00', '2026-02-16 11:00:05'),
     -- Investor 300: payment received
-    (300, 13, 1, 'payment', 1, 'Платёж получен', 'На ваш счёт зачислено 300 000,00 руб.', 'DELIVERED', TRUE, '2025-08-01 11:00:00', '2025-08-01 10:15:00', '2025-08-01 10:15:05'),
+    (300, 13, 1, 'payment', 1, 'Платёж получен', 'На ваш счёт зачислено 300 000,00 руб.', 'DELIVERED', TRUE, '2026-01-01 11:00:00', '2026-01-01 10:15:00', '2026-01-01 10:15:05'),
     -- Investor 302: contract approved
-    (302, 8, 1, 'investment_contract', 2, 'ДИ одобрен', 'Ваш договор инвестирования DI-2025-000002 одобрен оператором.', 'DELIVERED', FALSE, NULL, '2025-09-21 10:00:00', '2025-09-21 10:00:05'),
+    (302, 8, 1, 'investment_contract', 2, 'ДИ одобрен', 'Ваш договор инвестирования DI-2026-000002 одобрен оператором.', 'DELIVERED', FALSE, NULL, '2026-02-21 10:00:00', '2026-02-21 10:00:05'),
     -- Emitent 201: proposal activated
-    (201, 4, 1, 'investment_proposal', 3, 'ИП опубликовано', 'Ваше инвестиционное предложение "Размещение акций ЭкоПак" опубликовано и доступно инвесторам.', 'DELIVERED', TRUE, '2025-10-01 01:00:00', '2025-10-01 00:00:00', '2025-10-01 00:00:05');
+    (201, 4, 1, 'investment_proposal', 3, 'ИП опубликовано', 'Ваше инвестиционное предложение "Размещение акций ЭкоПак" опубликовано и доступно инвесторам.', 'DELIVERED', TRUE, '2026-03-01 01:00:00', '2026-03-01 00:00:00', '2026-03-01 00:00:05');
 
 --changeset investplatform:002-mock-auth-audit-log
 INSERT INTO auth_audit_log (user_id, event_type, ip_address, user_agent, is_successful) VALUES
