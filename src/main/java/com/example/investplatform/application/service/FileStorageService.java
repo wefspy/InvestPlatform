@@ -54,7 +54,7 @@ public class FileStorageService {
         }
     }
 
-    public InputStreamResource download(String fileName) {
+    public FileDownloadResult download(String fileName) {
         try {
             StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
                     .bucket(minioProperties.getBucket())
@@ -66,7 +66,7 @@ public class FileStorageService {
                     .object(fileName)
                     .build());
 
-            return new InputStreamResource(stream);
+            return new FileDownloadResult(stream, stat.contentType(), stat.size());
         } catch (io.minio.errors.ErrorResponseException e) {
             if ("NoSuchKey".equals(e.errorResponse().code())) {
                 throw new FileNotFoundException("Файл не найден: " + fileName);
@@ -77,21 +77,7 @@ public class FileStorageService {
         }
     }
 
-    public String getContentType(String fileName) {
-        try {
-            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
-                    .bucket(minioProperties.getBucket())
-                    .object(fileName)
-                    .build());
-            return stat.contentType();
-        } catch (io.minio.errors.ErrorResponseException e) {
-            if ("NoSuchKey".equals(e.errorResponse().code())) {
-                throw new FileNotFoundException("Файл не найден: " + fileName);
-            }
-            throw new FileStorageException("Ошибка получения метаданных файла: " + fileName, e);
-        } catch (Exception e) {
-            throw new FileStorageException("Ошибка получения метаданных файла: " + fileName, e);
-        }
+    public record FileDownloadResult(InputStream stream, String contentType, long size) {
     }
 
     public List<FileResponseDto> listFiles() {

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -45,13 +46,28 @@ public class FileRestController {
     @ApiResponse(responseCode = "404", description = "Файл не найден", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
-    @GetMapping("/{fileName}")
-    public ResponseEntity<InputStreamResource> download(@PathVariable String fileName) {
-        String contentType = fileStorageService.getContentType(fileName);
-        InputStreamResource resource = fileStorageService.download(fileName);
+    @GetMapping("/{*filePath}")
+    public ResponseEntity<InputStreamResource> download(@PathVariable String filePath, HttpServletRequest request) {
+        // Remove leading slash added by {*filePath} capture
+        String fileName = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+
+        FileStorageService.FileDownloadResult result = fileStorageService.download(fileName);
+        InputStreamResource resource = new InputStreamResource(result.stream()) {
+            @Override
+            public String getDescription() {
+                return "MinIO object: " + fileName;
+            }
+        };
+
+        // Use only the last segment for Content-Disposition filename
+        String displayName = fileName.contains("/")
+                ? fileName.substring(fileName.lastIndexOf('/') + 1)
+                : fileName;
+
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.parseMediaType(result.contentType()))
+                .contentLength(result.size())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + displayName + "\"")
                 .body(resource);
     }
 
@@ -67,8 +83,9 @@ public class FileRestController {
     @ApiResponse(responseCode = "404", description = "Файл не найден", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
-    @DeleteMapping("/{fileName}")
-    public ResponseEntity<Void> delete(@PathVariable String fileName) {
+    @DeleteMapping("/{*filePath}")
+    public ResponseEntity<Void> delete(@PathVariable String filePath) {
+        String fileName = filePath.startsWith("/") ? filePath.substring(1) : filePath;
         fileStorageService.delete(fileName);
         return ResponseEntity.noContent().build();
     }
