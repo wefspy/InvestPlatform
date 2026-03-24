@@ -8,14 +8,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.core.io.InputStreamResource;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -47,28 +48,22 @@ public class FileRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{*filePath}")
-    public ResponseEntity<InputStreamResource> download(@PathVariable String filePath, HttpServletRequest request) {
-        // Remove leading slash added by {*filePath} capture
+    public void download(@PathVariable String filePath, HttpServletResponse response) throws IOException {
         String fileName = filePath.startsWith("/") ? filePath.substring(1) : filePath;
 
         FileStorageService.FileDownloadResult result = fileStorageService.download(fileName);
-        InputStreamResource resource = new InputStreamResource(result.stream()) {
-            @Override
-            public String getDescription() {
-                return "MinIO object: " + fileName;
-            }
-        };
 
-        // Use only the last segment for Content-Disposition filename
         String displayName = fileName.contains("/")
                 ? fileName.substring(fileName.lastIndexOf('/') + 1)
                 : fileName;
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(result.contentType()))
-                .contentLength(result.size())
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + displayName + "\"")
-                .body(resource);
+        response.setContentType(result.contentType());
+        response.setContentLengthLong(result.size());
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + displayName + "\"");
+
+        try (InputStream in = result.stream()) {
+            in.transferTo(response.getOutputStream());
+        }
     }
 
     @Operation(summary = "Получить список всех файлов")
