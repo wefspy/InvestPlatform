@@ -126,7 +126,7 @@ public class InvestmentProposalRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'EMITENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'EMITENT', 'INVESTOR')")
     public ResponseEntity<List<ProposalDocumentResponseDto>> getDocuments(@PathVariable Long id) {
         return ResponseEntity.ok(proposalService.getDocuments(id));
     }
