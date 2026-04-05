@@ -56,6 +56,9 @@ public class InvestmentContract {
     @Column(name = "price_per_security", precision = 18, scale = 4)
     private BigDecimal pricePerSecurity;
 
+    @Column(name = "commission_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal commissionAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private Operator reviewedBy;

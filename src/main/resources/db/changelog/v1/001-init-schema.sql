@@ -56,7 +56,8 @@ INSERT INTO account_types (code, name) VALUES
     ('21', 'Счёт иностранного уполномоченного держателя'),
     ('22', 'Счёт депозитарных программ'),
     ('32', 'Эскроу-агент'),
-    ('33', 'Казначейский счёт');
+    ('33', 'Казначейский счёт'),
+    ('99', 'Счёт платформы');
 
 --changeset investplatform:001-create-personal-accounts
 CREATE TABLE personal_accounts (
@@ -71,6 +72,9 @@ CREATE TABLE personal_accounts (
 );
 
 CREATE INDEX idx_personal_accounts_type ON personal_accounts (account_type_id);
+
+INSERT INTO personal_accounts (account_number, account_type_id, balance, hold_amount)
+VALUES ('PLATFORM-001', (SELECT id FROM account_types WHERE code = '99'), 0.00, 0.00);
 
 --changeset investplatform:001-create-emitents
 CREATE TABLE emitents (
@@ -837,6 +841,7 @@ CREATE TABLE investment_contracts (
     security_id         BIGINT         REFERENCES securities(id),
     securities_quantity DECIMAL(18,4)  CHECK (securities_quantity > 0),
     price_per_security  DECIMAL(18,4)  CHECK (price_per_security > 0),
+    commission_amount   DECIMAL(18,2)  NOT NULL DEFAULT 0.00 CHECK (commission_amount >= 0),
     reviewed_by         BIGINT         REFERENCES operators(id),
     rejection_reason    TEXT,
     withdrawal_reason   TEXT,

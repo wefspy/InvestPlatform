@@ -55,6 +55,10 @@ app:
     secret: ${SPRING_JWT_SECRET}
     access-expiration: 1h
     refresh-expiration: 30d
+  commission:
+    rate: 0.05
+    min-amount: 100.00
+    max-amount: 50000.00
   credentials:
     root:
       password: ${SPRING_ROOT_PASSWORD}

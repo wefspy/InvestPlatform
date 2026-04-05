@@ -28,8 +28,34 @@ import org.springframework.web.bind.annotation.*;
 public class InvestmentContractRestController {
 
     private final InvestmentContractService contractService;
+    private final com.example.investplatform.application.service.CommissionService commissionService;
 
     // ========================= ИНВЕСТОР =========================
+
+    @Operation(summary = "Параметры комиссии платформы",
+            description = "Возвращает текущую ставку комиссии (про��ент), минимальную и максимальную сумму.")
+    @ApiResponse(responseCode = "200", description = "Па��аметры комиссии", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = CommissionInfoDto.class))
+    })
+    @GetMapping("/commission-info")
+    @PreAuthorize("hasRole('INVESTOR')")
+    public ResponseEntity<CommissionInfoDto> getCommissionInfo() {
+        return ResponseEntity.ok(commissionService.getInfo());
+    }
+
+    @Operation(summary = "Предварительный расчёт стоимости договора",
+            description = "Возвращает расчёт суммы инвестиции, комиссии платформы и итого "
+                    + "для указанного количества ценных бумаг по конкретному ИП. Не списывает средства.")
+    @ApiResponse(responseCode = "200", description = "Расчёт выполнен", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ContractCalculationDto.class))
+    })
+    @GetMapping("/calculate")
+    @PreAuthorize("hasRole('INVESTOR')")
+    public ResponseEntity<ContractCalculationDto> calculate(
+            @RequestParam Long proposalId,
+            @RequestParam Long securitiesQuantity) {
+        return ResponseEntity.ok(contractService.calculate(proposalId, securitiesQuantity));
+    }
 
     @Operation(summary = "Создание договора инвестирования",
             description = "Инвестор создаёт ДИ по активному ИП. Средства списываются со счёта сразу, "

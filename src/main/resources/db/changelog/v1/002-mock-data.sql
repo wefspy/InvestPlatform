@@ -923,45 +923,45 @@ INSERT INTO account_transactions (personal_account_id, transaction_type, amount,
 -- contract_status_id: 1=reviewing, 2=withdrawn, 3=rejected, 4=approved, 5=completed, 6=failed
 
 -- Contracts for proposal 1 (ТехноИнвест акции)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, payment_id, signed_at, reviewed_at, created_at) VALUES
-    (1, 'DI-2026-000001', 1, 300, 4,  50000.00, 1,  500.0000, 100.0000, 100, 2, '2026-02-15 10:00:00', '2026-02-16 11:00:00', '2026-02-15 10:00:00'),
-    (2, 'DI-2026-000002', 1, 302, 4, 200000.00, 1, 2000.0000, 100.0000, 100, 5, '2026-02-20 15:00:00', '2026-02-21 10:00:00', '2026-02-20 15:00:00'),
-    (3, 'DI-2026-000003', 1, 303, 4, 100000.00, 1, 1000.0000, 100.0000, 102, NULL, '2026-02-25 14:00:00', '2026-02-26 09:00:00', '2026-02-25 14:00:00'),
-    (4, 'DI-2026-000004', 1, 306, 1,  50000.00, 1,  500.0000, 100.0000, NULL, NULL, '2026-03-28 10:00:00', NULL, '2026-03-28 10:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, payment_id, signed_at, reviewed_at, created_at) VALUES
+    (1, 'DI-2026-000001', 1, 300, 4,  50000.00,  2500.00, 1,  500.0000, 100.0000, 100, 2, '2026-02-15 10:00:00', '2026-02-16 11:00:00', '2026-02-15 10:00:00'),
+    (2, 'DI-2026-000002', 1, 302, 4, 200000.00, 10000.00, 1, 2000.0000, 100.0000, 100, 5, '2026-02-20 15:00:00', '2026-02-21 10:00:00', '2026-02-20 15:00:00'),
+    (3, 'DI-2026-000003', 1, 303, 4, 100000.00,  5000.00, 1, 1000.0000, 100.0000, 102, NULL, '2026-02-25 14:00:00', '2026-02-26 09:00:00', '2026-02-25 14:00:00'),
+    (4, 'DI-2026-000004', 1, 306, 1,  50000.00,  2500.00, 1,  500.0000, 100.0000, NULL, NULL, '2026-03-28 10:00:00', NULL, '2026-03-28 10:00:00');
 
 -- Contracts for proposal 3 (ЭкоПак)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
-    (5, 'DI-2026-000005', 3, 300, 1,  50000.00, 3, 100.0000, 500.0000, NULL, '2026-03-05 09:00:00', NULL, '2026-03-05 09:00:00'),
-    (6, 'DI-2026-000006', 3, 304, 4,  25000.00, 3,  50.0000, 500.0000, 103, '2026-03-10 11:00:00', '2026-03-11 14:00:00', '2026-03-10 11:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
+    (5, 'DI-2026-000005', 3, 300, 1,  50000.00, 2500.00, 3, 100.0000, 500.0000, NULL, '2026-03-05 09:00:00', NULL, '2026-03-05 09:00:00'),
+    (6, 'DI-2026-000006', 3, 304, 4,  25000.00, 1250.00, 3,  50.0000, 500.0000, 103, '2026-03-10 11:00:00', '2026-03-11 14:00:00', '2026-03-10 11:00:00');
 
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, signed_at, withdrawn_at, withdrawal_reason, created_at) VALUES
-    (7, 'DI-2026-000007', 3, 307, 2,  15000.00, 3,  30.0000, 500.0000, '2026-03-12 10:00:00', '2026-03-15 16:00:00', 'Изменение инвестиционной стратегии, перераспределение средств в другой проект.', '2026-03-12 10:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, signed_at, withdrawn_at, withdrawal_reason, created_at) VALUES
+    (7, 'DI-2026-000007', 3, 307, 2,  15000.00, 750.00, 3,  30.0000, 500.0000, '2026-03-12 10:00:00', '2026-03-15 16:00:00', 'Изменение инвестиционной стратегии, перераспределение средств в другой проект.', '2026-03-12 10:00:00');
 
 -- Contracts for proposal 5 (СтройИнновация акции)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
-    (8,  'DI-2026-000008', 5, 303, 4, 200000.00, 4, 1000.0000, 200.0000, 102, '2026-03-10 09:00:00', '2026-03-12 11:00:00', '2026-03-10 09:00:00'),
-    (9,  'DI-2026-000009', 5, 304, 4, 100000.00, 4,  500.0000, 200.0000, 102, '2026-03-15 10:00:00', '2026-03-16 15:00:00', '2026-03-15 10:00:00'),
-    (10, 'DI-2026-000010', 5, 309, 1, 400000.00, 4, 2000.0000, 200.0000, NULL, '2026-03-30 12:00:00', NULL, '2026-03-30 12:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
+    (8,  'DI-2026-000008', 5, 303, 4, 200000.00, 10000.00, 4, 1000.0000, 200.0000, 102, '2026-03-10 09:00:00', '2026-03-12 11:00:00', '2026-03-10 09:00:00'),
+    (9,  'DI-2026-000009', 5, 304, 4, 100000.00,  5000.00, 4,  500.0000, 200.0000, 102, '2026-03-15 10:00:00', '2026-03-16 15:00:00', '2026-03-15 10:00:00'),
+    (10, 'DI-2026-000010', 5, 309, 1, 400000.00, 20000.00, 4, 2000.0000, 200.0000, NULL, '2026-03-30 12:00:00', NULL, '2026-03-30 12:00:00');
 
 -- Contracts for proposal 7 (АгроТех акции)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
-    (11, 'DI-2026-000011', 7, 302, 4, 300000.00, 6, 2000.0000, 150.0000, 103, '2026-03-01 10:00:00', '2026-03-03 11:00:00', '2026-03-01 10:00:00'),
-    (12, 'DI-2026-000012', 7, 305, 4,  75000.00, 6,  500.0000, 150.0000, 103, '2026-03-05 09:00:00', '2026-03-06 14:00:00', '2026-03-05 09:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
+    (11, 'DI-2026-000011', 7, 302, 4, 300000.00, 15000.00, 6, 2000.0000, 150.0000, 103, '2026-03-01 10:00:00', '2026-03-03 11:00:00', '2026-03-01 10:00:00'),
+    (12, 'DI-2026-000012', 7, 305, 4,  75000.00,  3750.00, 6,  500.0000, 150.0000, 103, '2026-03-05 09:00:00', '2026-03-06 14:00:00', '2026-03-05 09:00:00');
 
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, failed_at, created_at) VALUES
-    (13, 'DI-2026-000013', 7, 307, 6,  45000.00, 6,  300.0000, 150.0000, 103, '2026-03-02 11:00:00', '2026-03-04 10:00:00', '2026-04-01 00:00:00', '2026-03-02 11:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, failed_at, created_at) VALUES
+    (13, 'DI-2026-000013', 7, 307, 6,  45000.00, 2250.00, 6,  300.0000, 150.0000, 103, '2026-03-02 11:00:00', '2026-03-04 10:00:00', '2026-04-01 00:00:00', '2026-03-02 11:00:00');
 
 -- Contracts for proposal 9 (МедТехника обыкновенные акции)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
-    (14, 'DI-2026-000014', 9, 303, 4, 500000.00, 8, 1000.0000, 500.0000, 104, '2026-03-20 10:00:00', '2026-03-22 11:00:00', '2026-03-20 10:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, created_at) VALUES
+    (14, 'DI-2026-000014', 9, 303, 4, 500000.00, 25000.00, 8, 1000.0000, 500.0000, 104, '2026-03-20 10:00:00', '2026-03-22 11:00:00', '2026-03-20 10:00:00');
 
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, rejection_reason, signed_at, reviewed_at, created_at) VALUES
-    (15, 'DI-2026-000015', 9, 306, 3, 250000.00, 8,  500.0000, 500.0000, 104, 'Превышен лимит инвестирования данного инвестора для текущего календарного года.', '2026-03-21 10:00:00', '2026-03-23 15:00:00', '2026-03-21 10:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, rejection_reason, signed_at, reviewed_at, created_at) VALUES
+    (15, 'DI-2026-000015', 9, 306, 3, 250000.00, 12500.00, 8,  500.0000, 500.0000, 104, 'Превышен лимит инвестирования данного инвестора для текущего календарного года.', '2026-03-21 10:00:00', '2026-03-23 15:00:00', '2026-03-21 10:00:00');
 
 -- Contracts for proposal 10 (МедТехника привилегированные — completed)
-INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, completed_at, created_at) VALUES
-    (16, 'DI-2025-000016', 10, 304, 5,  500000.00, 9,  500.0000, 1000.0000, 100, '2025-10-10 10:00:00', '2025-10-12 11:00:00', '2026-01-31 23:59:59', '2025-10-10 10:00:00'),
-    (17, 'DI-2025-000017', 10, 309, 5, 1500000.00, 9, 1500.0000, 1000.0000, 100, '2025-10-15 14:00:00', '2025-10-17 10:00:00', '2026-01-31 23:59:59', '2025-10-15 14:00:00');
+INSERT INTO investment_contracts (id, contract_number, proposal_id, investor_id, status_id, amount, commission_amount, security_id, securities_quantity, price_per_security, reviewed_by, signed_at, reviewed_at, completed_at, created_at) VALUES
+    (16, 'DI-2025-000016', 10, 304, 5,  500000.00, 25000.00, 9,  500.0000, 1000.0000, 100, '2025-10-10 10:00:00', '2025-10-12 11:00:00', '2026-01-31 23:59:59', '2025-10-10 10:00:00'),
+    (17, 'DI-2025-000017', 10, 309, 5, 1500000.00, 50000.00, 9, 1500.0000, 1000.0000, 100, '2025-10-15 14:00:00', '2025-10-17 10:00:00', '2026-01-31 23:59:59', '2025-10-15 14:00:00');
 
 SELECT setval('investment_contracts_id_seq', (SELECT MAX(id) FROM investment_contracts));
 

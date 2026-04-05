@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class InvestmentContractService {
     private static final String APPROVED_STATUS = "approved";
 
     private static final int WITHDRAWAL_PERIOD_DAYS = 5;
+    private static final String PLATFORM_ACCOUNT_NUMBER = "PLATFORM-001";
 
     private final InvestmentContractRepository contractRepository;
     private final ContractStatusRepository contractStatusRepository;
@@ -46,8 +48,30 @@ public class InvestmentContractService {
     private final PersonalAccountRepository personalAccountRepository;
     private final AccountTransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final CommissionService commissionService;
 
     // ========================= Инвестор =========================
+
+    @Transactional(readOnly = true)
+    public ContractCalculationDto calculate(Long proposalId, Long securitiesQuantity) {
+        InvestmentProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new InvestmentProposalNotFoundException(
+                        "Инвестиционное предложение с ID %d не найдено".formatted(proposalId)));
+
+        BigDecimal pricePerUnit = proposal.getPricePerUnit();
+        BigDecimal investmentAmount = pricePerUnit
+                .multiply(BigDecimal.valueOf(securitiesQuantity))
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal commissionAmount = commissionService.calculate(investmentAmount);
+
+        return new ContractCalculationDto(
+                securitiesQuantity,
+                pricePerUnit,
+                investmentAmount,
+                commissionAmount,
+                investmentAmount.add(commissionAmount)
+        );
+    }
 
     @Transactional
     public InvestmentContractResponseDto create(CreateInvestmentContractDto dto, Long investorUserId) {
@@ -74,38 +98,74 @@ public class InvestmentContractService {
                     "У вас уже есть договор по данному инвестиционному предложению");
         }
 
-        if (dto.amount().compareTo(proposal.getMinInvestmentAmount()) < 0) {
+        long quantity = dto.securitiesQuantity();
+
+        if (proposal.getMinPurchaseQuantity() != null && quantity < proposal.getMinPurchaseQuantity()) {
             throw new IllegalArgumentException(
-                    "Сумма инвестирования не может быть меньше %s".formatted(proposal.getMinInvestmentAmount()));
+                    "Количество ценных бумаг не может быть меньше %d".formatted(proposal.getMinPurchaseQuantity()));
         }
 
+        if (proposal.getMaxPurchaseQuantity() != null && quantity > proposal.getMaxPurchaseQuantity()) {
+            throw new IllegalArgumentException(
+                    "Количество ценных бумаг не может быть больше %d".formatted(proposal.getMaxPurchaseQuantity()));
+        }
+
+        BigDecimal pricePerUnit = proposal.getPricePerUnit();
+        BigDecimal amount = pricePerUnit.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal commissionAmount = commissionService.calculate(amount);
+        BigDecimal totalCharge = amount.add(commissionAmount);
+
         BigDecimal remainingCapacity = proposal.getMaxInvestmentAmount().subtract(proposal.getCollectedAmount());
-        if (dto.amount().compareTo(remainingCapacity) > 0) {
+        if (amount.compareTo(remainingCapacity) > 0) {
             throw new IllegalArgumentException(
                     "Сумма превышает оставшийся лимит сбора (%s)".formatted(remainingCapacity));
         }
 
         PersonalAccount account = investor.getPersonalAccount();
         BigDecimal availableBalance = account.getBalance().subtract(account.getHoldAmount());
-        if (availableBalance.compareTo(dto.amount()) < 0) {
+        if (availableBalance.compareTo(totalCharge) < 0) {
             throw new InsufficientFundsException(
-                    "Недостаточно средств на счёте. Доступно: %s, требуется: %s"
-                            .formatted(availableBalance, dto.amount()));
+                    "Недостаточно средств на счёте. Доступно: %s, требуется: %s (инвестиция: %s, комиссия: %s)"
+                            .formatted(availableBalance, totalCharge, amount, commissionAmount));
         }
 
-        account.setBalance(account.getBalance().subtract(dto.amount()));
+        account.setBalance(account.getBalance().subtract(totalCharge));
         personalAccountRepository.save(account);
 
-        AccountTransaction transaction = AccountTransaction.builder()
+        AccountTransaction investTx = AccountTransaction.builder()
                 .personalAccount(account)
                 .transactionType(TransactionType.TRANSFER_OUT)
-                .amount(dto.amount())
-                .balanceAfter(account.getBalance())
+                .amount(amount)
+                .balanceAfter(account.getBalance().add(commissionAmount))
                 .description("Инвестирование по ИП #%d: %s".formatted(proposal.getId(), proposal.getTitle()))
                 .build();
-        transactionRepository.save(transaction);
+        transactionRepository.save(investTx);
 
-        proposal.setCollectedAmount(proposal.getCollectedAmount().add(dto.amount()));
+        AccountTransaction commissionTx = AccountTransaction.builder()
+                .personalAccount(account)
+                .transactionType(TransactionType.COMMISSION)
+                .amount(commissionAmount)
+                .balanceAfter(account.getBalance())
+                .description("Комиссия платформы по ИП #%d: %s".formatted(proposal.getId(), proposal.getTitle()))
+                .build();
+        transactionRepository.save(commissionTx);
+
+        PersonalAccount platformAccount = personalAccountRepository
+                .findByAccountNumber(PLATFORM_ACCOUNT_NUMBER)
+                .orElseThrow(() -> new IllegalStateException("Счёт платформы не найден"));
+        platformAccount.setBalance(platformAccount.getBalance().add(commissionAmount));
+        personalAccountRepository.save(platformAccount);
+
+        AccountTransaction platformTx = AccountTransaction.builder()
+                .personalAccount(platformAccount)
+                .transactionType(TransactionType.TRANSFER_IN)
+                .amount(commissionAmount)
+                .balanceAfter(platformAccount.getBalance())
+                .description("Комиссия по договору инвестирования, ИП #%d".formatted(proposal.getId()))
+                .build();
+        transactionRepository.save(platformTx);
+
+        proposal.setCollectedAmount(proposal.getCollectedAmount().add(amount));
         proposalRepository.save(proposal);
 
         ContractStatus reviewingStatus = contractStatusRepository.findByCode(REVIEWING_STATUS)
@@ -118,7 +178,11 @@ public class InvestmentContractService {
                 .proposal(proposal)
                 .investor(investor)
                 .status(reviewingStatus)
-                .amount(dto.amount())
+                .amount(amount)
+                .commissionAmount(commissionAmount)
+                .securitiesQuantity(BigDecimal.valueOf(quantity))
+                .pricePerSecurity(pricePerUnit)
+                .security(proposal.getSecurity())
                 .signedAt(LocalDateTime.now())
                 .build();
         contract = contractRepository.save(contract);
@@ -322,18 +386,44 @@ public class InvestmentContractService {
     // ========================= Private =========================
 
     private void refundToInvestor(InvestmentContract contract, String description) {
+        BigDecimal refundTotal = contract.getAmount().add(contract.getCommissionAmount());
+
         PersonalAccount account = contract.getInvestor().getPersonalAccount();
-        account.setBalance(account.getBalance().add(contract.getAmount()));
+        account.setBalance(account.getBalance().add(refundTotal));
         personalAccountRepository.save(account);
 
         AccountTransaction refundTx = AccountTransaction.builder()
                 .personalAccount(account)
                 .transactionType(TransactionType.TRANSFER_IN)
                 .amount(contract.getAmount())
-                .balanceAfter(account.getBalance())
+                .balanceAfter(account.getBalance().subtract(contract.getCommissionAmount()))
                 .description(description)
                 .build();
         transactionRepository.save(refundTx);
+
+        AccountTransaction commissionRefundTx = AccountTransaction.builder()
+                .personalAccount(account)
+                .transactionType(TransactionType.COMMISSION)
+                .amount(contract.getCommissionAmount())
+                .balanceAfter(account.getBalance())
+                .description("Возврат комиссии: " + description)
+                .build();
+        transactionRepository.save(commissionRefundTx);
+
+        PersonalAccount platformAccount = personalAccountRepository
+                .findByAccountNumber(PLATFORM_ACCOUNT_NUMBER)
+                .orElseThrow(() -> new IllegalStateException("Счёт платформы не найден"));
+        platformAccount.setBalance(platformAccount.getBalance().subtract(contract.getCommissionAmount()));
+        personalAccountRepository.save(platformAccount);
+
+        AccountTransaction platformRefundTx = AccountTransaction.builder()
+                .personalAccount(platformAccount)
+                .transactionType(TransactionType.COMMISSION)
+                .amount(contract.getCommissionAmount())
+                .balanceAfter(platformAccount.getBalance())
+                .description("Возврат комиссии по договору #%s".formatted(contract.getContractNumber()))
+                .build();
+        transactionRepository.save(platformRefundTx);
     }
 
     private void verifyInvestorOwnership(InvestmentContract contract, Long investorUserId) {
@@ -381,6 +471,9 @@ public class InvestmentContractService {
                 c.getStatus().getCode(),
                 c.getStatus().getName(),
                 c.getAmount(),
+                c.getSecuritiesQuantity(),
+                c.getPricePerSecurity(),
+                c.getCommissionAmount(),
                 c.getRejectionReason(),
                 c.getWithdrawalReason(),
                 c.getSignedAt(),
@@ -402,6 +495,8 @@ public class InvestmentContractService {
                 c.getStatus().getCode(),
                 c.getStatus().getName(),
                 c.getAmount(),
+                c.getSecuritiesQuantity(),
+                c.getCommissionAmount(),
                 c.getCreatedAt()
         );
     }

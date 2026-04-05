@@ -11,6 +11,8 @@ public record InvestmentContractListItemDto(
         String statusCode,
         String statusName,
         BigDecimal amount,
+        BigDecimal securitiesQuantity,
+        BigDecimal commissionAmount,
         LocalDateTime createdAt
 ) {
 }
