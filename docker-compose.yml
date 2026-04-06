@@ -76,7 +76,7 @@ services:
           memory: 128M
 
   app:
-    image: ghcr.io/wefspy/investplatform:main
+    image: ghcr.io/wefspy/investplatform:master
     container_name: investplatform-app
     env_file:
       - .env
