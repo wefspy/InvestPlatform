@@ -3,6 +3,7 @@ package com.example.investplatform.controller;
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
 import com.example.investplatform.application.service.EmitentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,13 +17,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -93,5 +92,48 @@ public class EmitentRestController {
 
         EmitentResponseDto response = emitentService.createLegalEntity(dto, documents);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // ========================= ДОКУМЕНТЫ =========================
+
+    @Operation(summary = "Получение списка документов эмитента")
+    @ApiResponse(responseCode = "200", description = "Список документов")
+    @ApiResponse(responseCode = "400", description = "Эмит��нт не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}/documents")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EmitentDocumentResponseDto>> getDocuments(@PathVariable Long id) {
+        return ResponseEntity.ok(emitentService.getDocuments(id));
+    }
+
+    @Operation(summary = "Удаление документа эмитента")
+    @ApiResponse(responseCode = "204", description = "Документ удалён")
+    @ApiResponse(responseCode = "400", description = "Эмитент или документ не найдены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @DeleteMapping("/{id}/documents/{documentId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id,
+                                                @PathVariable Long documentId) {
+        emitentService.deleteDocument(id, documentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Замена документа эмитента",
+            description = "Заменяет файл существующего документа. Тип документа остаётся прежним.")
+    @ApiResponse(responseCode = "200", description = "Документ заменён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentDocumentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент или документ не найдены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping(value = "/{id}/documents/{documentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmitentDocumentResponseDto> replaceDocument(
+            @PathVariable Long id,
+            @PathVariable Long documentId,
+            @RequestPart("file") MultipartFile file) {
+        return ResponseEntity.ok(emitentService.replaceDocument(id, documentId, file));
     }
 }

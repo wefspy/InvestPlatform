@@ -208,6 +208,62 @@ public class InvestmentProposalService {
         documentRepository.save(document);
     }
 
+    @Transactional
+    public void deleteDocument(Long proposalId, Long documentId, Long emitentUserId) {
+        InvestmentProposal proposal = findProposalOrThrow(proposalId);
+        verifyOwnership(proposal, emitentUserId);
+
+        if (!DRAFT_STATUS.equals(proposal.getStatus().getCode())) {
+            throw new InvalidProposalStatusTransitionException(
+                    "Удаление документов возможно только в статусе 'Черновик'");
+        }
+
+        ProposalDocument document = documentRepository.findByIdAndProposalId(documentId, proposalId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден в ИП с ID %d".formatted(documentId, proposalId)));
+
+        fileStorageService.delete(document.getFilePath());
+        documentRepository.delete(document);
+    }
+
+    @Transactional
+    public ProposalDocumentResponseDto replaceDocument(Long proposalId, Long documentId,
+                                                       MultipartFile file, Long emitentUserId) {
+        InvestmentProposal proposal = findProposalOrThrow(proposalId);
+        verifyOwnership(proposal, emitentUserId);
+
+        if (!DRAFT_STATUS.equals(proposal.getStatus().getCode())) {
+            throw new InvalidProposalStatusTransitionException(
+                    "Замена документов возможна только в статусе 'Черновик'");
+        }
+
+        ProposalDocument document = documentRepository.findByIdAndProposalId(documentId, proposalId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден в ИП с ID %d".formatted(documentId, proposalId)));
+
+        fileStorageService.delete(document.getFilePath());
+
+        String objectKey = "proposals/%d/%s_%s".formatted(
+                proposalId, document.getDocumentType().getCode(), file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        document.setFileName(file.getOriginalFilename());
+        document.setFilePath(objectKey);
+        document.setFileSize(file.getSize());
+        document.setMimeType(file.getContentType());
+        document = documentRepository.save(document);
+
+        return new ProposalDocumentResponseDto(
+                document.getId(),
+                document.getDocumentType().getCode(),
+                document.getDocumentType().getName(),
+                document.getFileName(),
+                document.getFilePath(),
+                document.getFileSize(),
+                document.getMimeType(),
+                document.getUploadedAt());
+    }
+
     @Transactional(readOnly = true)
     public Page<InvestmentProposalListItemDto> getMyProposals(Long emitentUserId, Pageable pageable) {
         return proposalRepository.findByEmitentUserId(emitentUserId, pageable)

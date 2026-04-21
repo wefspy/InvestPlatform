@@ -2,6 +2,7 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -98,6 +100,68 @@ public class EmitentService {
         saveDocuments(emitent, documents);
 
         return toResponse(emitent, user, account);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmitentDocumentResponseDto> getDocuments(Long emitentId) {
+        findEmitentOrThrow(emitentId);
+        return emitentDocumentRepository.findByEmitentId(emitentId).stream()
+                .map(this::toDocumentResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteDocument(Long emitentId, Long documentId) {
+        findEmitentOrThrow(emitentId);
+
+        EmitentDocument document = emitentDocumentRepository.findByIdAndEmitentId(documentId, emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден у эмитента с ID %d".formatted(documentId, emitentId)));
+
+        fileStorageService.delete(document.getFilePath());
+        emitentDocumentRepository.delete(document);
+    }
+
+    @Transactional
+    public EmitentDocumentResponseDto replaceDocument(Long emitentId, Long documentId,
+                                                       MultipartFile file) {
+        findEmitentOrThrow(emitentId);
+
+        EmitentDocument document = emitentDocumentRepository.findByIdAndEmitentId(documentId, emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден у эмитента с ID %d".formatted(documentId, emitentId)));
+
+        fileStorageService.delete(document.getFilePath());
+
+        String objectKey = "emitents/%d/%s_%s".formatted(
+                emitentId, document.getDocumentType().getCode(), file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        document.setFileName(file.getOriginalFilename());
+        document.setFilePath(objectKey);
+        document.setFileSize(file.getSize());
+        document.setMimeType(file.getContentType());
+        document = emitentDocumentRepository.save(document);
+
+        return toDocumentResponse(document);
+    }
+
+    private Emitent findEmitentOrThrow(Long emitentId) {
+        return emitentRepository.findById(emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Эмитент с ID %d не найден".formatted(emitentId)));
+    }
+
+    private EmitentDocumentResponseDto toDocumentResponse(EmitentDocument doc) {
+        return new EmitentDocumentResponseDto(
+                doc.getId(),
+                doc.getDocumentType().getCode(),
+                doc.getDocumentType().getName(),
+                doc.getFileName(),
+                doc.getFilePath(),
+                doc.getFileSize(),
+                doc.getMimeType(),
+                doc.getUploadedAt());
     }
 
     private void saveDocuments(Emitent emitent, Map<String, MultipartFile> documents) {

@@ -12,6 +12,7 @@ import com.example.investplatform.application.exception.ProposalAlreadyClaimedEx
 import com.example.investplatform.application.exception.InvestmentContractNotFoundException;
 import com.example.investplatform.application.exception.InsufficientFundsException;
 import com.example.investplatform.application.exception.ContractWithdrawalException;
+import com.example.investplatform.application.exception.InvalidTwoFactorCodeException;
 import io.jsonwebtoken.JwtException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -264,6 +265,28 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(ContractWithdrawalException.class)
     public ResponseEntity<ApiErrorDto> exception(ContractWithdrawalException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST,
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidTwoFactorCodeException.class)
+    public ResponseEntity<ApiErrorDto> exception(InvalidTwoFactorCodeException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.UNAUTHORIZED,
+                request
+        );
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorDto> exception(IllegalStateException exception,
                                                  HttpServletRequest request) {
         return buildErrorResponse(
                 exception,

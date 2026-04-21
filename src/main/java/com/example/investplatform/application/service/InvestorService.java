@@ -3,6 +3,7 @@ package com.example.investplatform.application.service;
 import com.example.investplatform.application.dto.investor.CreateInvestorIndividualDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorLegalEntityDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.investor.InvestorDocumentResponseDto;
 import com.example.investplatform.application.dto.investor.InvestorResponseDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -146,6 +148,68 @@ public class InvestorService {
         saveDocuments(investor, documents);
 
         return toResponse(investor, user, account);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvestorDocumentResponseDto> getDocuments(Long investorId) {
+        findInvestorOrThrow(investorId);
+        return investorDocumentRepository.findByInvestorId(investorId).stream()
+                .map(this::toDocumentResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteDocument(Long investorId, Long documentId) {
+        findInvestorOrThrow(investorId);
+
+        InvestorDocument document = investorDocumentRepository.findByIdAndInvestorId(documentId, investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден у инвестора с ID %d".formatted(documentId, investorId)));
+
+        fileStorageService.delete(document.getFilePath());
+        investorDocumentRepository.delete(document);
+    }
+
+    @Transactional
+    public InvestorDocumentResponseDto replaceDocument(Long investorId, Long documentId,
+                                                       MultipartFile file) {
+        findInvestorOrThrow(investorId);
+
+        InvestorDocument document = investorDocumentRepository.findByIdAndInvestorId(documentId, investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Документ с ID %d не найден у инвестора с ID %d".formatted(documentId, investorId)));
+
+        fileStorageService.delete(document.getFilePath());
+
+        String objectKey = "investors/%d/%s_%s".formatted(
+                investorId, document.getDocumentType().getCode(), file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        document.setFileName(file.getOriginalFilename());
+        document.setFilePath(objectKey);
+        document.setFileSize(file.getSize());
+        document.setMimeType(file.getContentType());
+        document = investorDocumentRepository.save(document);
+
+        return toDocumentResponse(document);
+    }
+
+    private Investor findInvestorOrThrow(Long investorId) {
+        return investorRepository.findById(investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Инвестор с ID %d не найден".formatted(investorId)));
+    }
+
+    private InvestorDocumentResponseDto toDocumentResponse(InvestorDocument doc) {
+        return new InvestorDocumentResponseDto(
+                doc.getId(),
+                doc.getDocumentType().getCode(),
+                doc.getDocumentType().getName(),
+                doc.getFileName(),
+                doc.getFilePath(),
+                doc.getFileSize(),
+                doc.getMimeType(),
+                doc.getUploadedAt());
     }
 
     private void saveDocuments(Investor investor, Map<String, MultipartFile> documents) {

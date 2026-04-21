@@ -34,6 +34,20 @@ public class JwtTokenFactory {
         return getBaseBuilder(userId, JwtTokenType.REFRESH).compact();
     }
 
+    public String generateTwoFactorToken(Long userId) {
+        Instant now = Instant.now();
+        Instant expiry = now.plusSeconds(300); // 5 minutes
+
+        return Jwts.builder()
+                .subject(userId.toString())
+                .id(UUID.randomUUID().toString())
+                .claim(JwtClaims.TOKEN_TYPE.getKey(), JwtTokenType.TWO_FACTOR.name())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiry))
+                .signWith(jwtKeyProvider.getSignKey())
+                .compact();
+    }
+
     private JwtBuilder getBaseBuilder(Long userId, JwtTokenType type) {
         Instant now = Instant.now();
         Instant expiry = now.plus(jwtProperties.getRefreshExpiration());

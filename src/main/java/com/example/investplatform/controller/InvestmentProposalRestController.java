@@ -119,6 +119,48 @@ public class InvestmentProposalRestController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @Operation(summary = "Удаление документа ИП",
+            description = "Эмитент удаляет документ. Возможно только в статусе 'Черновик'.")
+    @ApiResponse(responseCode = "204", description = "Документ удалён")
+    @ApiResponse(responseCode = "400", description = "Некорректные параметры или недопустимый статус", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "404", description = "ИП или документ не найдены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @DeleteMapping("/{id}/documents/{documentId}")
+    @PreAuthorize("hasRole('EMITENT')")
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable Long id,
+            @PathVariable Long documentId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        proposalService.deleteDocument(id, documentId, userDetails.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Замена документа ИП",
+            description = "Эмитент заменяет файл существующего документа. Тип документа остаётся прежним. "
+                    + "Возможно только в статусе 'Черновик'.")
+    @ApiResponse(responseCode = "200", description = "Документ заменён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ProposalDocumentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Некорректные параметры или недопустимый статус", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "404", description = "ИП или документ не найдены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping(value = "/{id}/documents/{documentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('EMITENT')")
+    public ResponseEntity<ProposalDocumentResponseDto> replaceDocument(
+            @PathVariable Long id,
+            @PathVariable Long documentId,
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        ProposalDocumentResponseDto response = proposalService.replaceDocument(id, documentId, file, userDetails.getId());
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "Получение списка документов ИП",
             description = "Доступно эмитенту (свои ИП), оператору и администратору.")
     @ApiResponse(responseCode = "200", description = "Список документов ИП")
