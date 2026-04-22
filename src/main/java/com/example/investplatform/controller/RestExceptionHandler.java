@@ -5,6 +5,7 @@ import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UserNotFoundException;
 import com.example.investplatform.application.exception.FileNotFoundException;
 import com.example.investplatform.application.exception.FileStorageException;
+import com.example.investplatform.application.exception.InvalidFileException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
 import com.example.investplatform.application.exception.InvestmentProposalNotFoundException;
 import com.example.investplatform.application.exception.InvalidProposalStatusTransitionException;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.ZonedDateTime;
@@ -204,6 +206,28 @@ public class RestExceptionHandler {
                 exception,
                 exception.getMessage(),
                 HttpStatus.INTERNAL_SERVER_ERROR,
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    public ResponseEntity<ApiErrorDto> exception(InvalidFileException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST,
+                request
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorDto> exception(MaxUploadSizeExceededException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                "Размер файла превышает допустимый предел",
+                HttpStatus.PAYLOAD_TOO_LARGE,
                 request
         );
     }

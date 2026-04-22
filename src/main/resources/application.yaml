@@ -51,6 +51,12 @@ app:
     access-key: ${MINIO_ACCESS_KEY}
     secret-key: ${MINIO_SECRET_KEY}
     bucket: ${MINIO_BUCKET}
+  file-upload:
+    max-size: 10MB
+    allowed-content-types:
+      - application/pdf
+    allowed-extensions:
+      - pdf
   jwt:
     secret: ${SPRING_JWT_SECRET}
     access-expiration: 1h

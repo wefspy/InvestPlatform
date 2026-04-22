@@ -3,28 +3,35 @@ package com.example.investplatform.application.service;
 import com.example.investplatform.application.dto.FileResponseDto;
 import com.example.investplatform.application.exception.FileNotFoundException;
 import com.example.investplatform.application.exception.FileStorageException;
+import com.example.investplatform.application.exception.InvalidFileException;
+import com.example.investplatform.infrastructure.config.property.FileUploadProperties;
 import com.example.investplatform.infrastructure.config.property.MinioProperties;
 import io.minio.*;
 import io.minio.messages.Item;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class FileStorageService {
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+    private final FileUploadProperties fileUploadProperties;
 
-    public FileStorageService(MinioClient minioClient, MinioProperties minioProperties) {
+    public FileStorageService(MinioClient minioClient,
+                              MinioProperties minioProperties,
+                              FileUploadProperties fileUploadProperties) {
         this.minioClient = minioClient;
         this.minioProperties = minioProperties;
+        this.fileUploadProperties = fileUploadProperties;
     }
 
     public FileResponseDto upload(MultipartFile file) {
+        validate(file);
         String fileName = file.getOriginalFilename();
         try {
             minioClient.putObject(PutObjectArgs.builder()
@@ -41,6 +48,7 @@ public class FileStorageService {
     }
 
     public String upload(MultipartFile file, String objectKey) {
+        validate(file);
         try {
             minioClient.putObject(PutObjectArgs.builder()
                     .bucket(minioProperties.getBucket())
@@ -51,6 +59,39 @@ public class FileStorageService {
             return objectKey;
         } catch (Exception e) {
             throw new FileStorageException("Ошибка загрузки файла: " + objectKey, e);
+        }
+    }
+
+    private void validate(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidFileException("Файл не должен быть пустым");
+        }
+
+        long maxBytes = fileUploadProperties.getMaxSize().toBytes();
+        if (file.getSize() > maxBytes) {
+            throw new InvalidFileException(String.format(
+                    "Размер файла %d байт превышает допустимый предел %d байт",
+                    file.getSize(),
+                    maxBytes
+            ));
+        }
+
+        String contentType = file.getContentType();
+        List<String> allowedContentTypes = fileUploadProperties.getAllowedContentTypes();
+        if (contentType == null || !allowedContentTypes.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new InvalidFileException("Недопустимый тип файла. Разрешены только: "
+                    + String.join(", ", allowedContentTypes));
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || !originalName.contains(".")) {
+            throw new InvalidFileException("Не удалось определить расширение файла");
+        }
+        String extension = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        List<String> allowedExtensions = fileUploadProperties.getAllowedExtensions();
+        if (!allowedExtensions.contains(extension)) {
+            throw new InvalidFileException("Недопустимое расширение файла. Разрешены только: "
+                    + String.join(", ", allowedExtensions));
         }
     }
 
