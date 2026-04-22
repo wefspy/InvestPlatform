@@ -14,6 +14,9 @@ import com.example.investplatform.application.exception.InvestmentContractNotFou
 import com.example.investplatform.application.exception.InsufficientFundsException;
 import com.example.investplatform.application.exception.ContractWithdrawalException;
 import com.example.investplatform.application.exception.InvalidTwoFactorCodeException;
+import com.example.investplatform.application.exception.PaymentNotFoundException;
+import com.example.investplatform.application.exception.WebhookProcessingException;
+import com.example.investplatform.application.exception.YookassaApiException;
 import io.jsonwebtoken.JwtException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -305,6 +308,39 @@ public class RestExceptionHandler {
                 exception,
                 exception.getMessage(),
                 HttpStatus.UNAUTHORIZED,
+                request
+        );
+    }
+
+    @ExceptionHandler(PaymentNotFoundException.class)
+    public ResponseEntity<ApiErrorDto> exception(PaymentNotFoundException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND,
+                request
+        );
+    }
+
+    @ExceptionHandler(YookassaApiException.class)
+    public ResponseEntity<ApiErrorDto> exception(YookassaApiException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                "Ошибка взаимодействия с ЮKassa: " + exception.getMessage(),
+                HttpStatus.BAD_GATEWAY,
+                request
+        );
+    }
+
+    @ExceptionHandler(WebhookProcessingException.class)
+    public ResponseEntity<ApiErrorDto> exception(WebhookProcessingException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST,
                 request
         );
     }

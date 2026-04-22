@@ -69,3 +69,12 @@ app:
     root:
       password: ${SPRING_ROOT_PASSWORD}
       email: ${SPRING_ROOT_EMAIL}
+  yookassa:
+    api-url: ${YOOKASSA_API_URL:https://api.yookassa.ru/v3}
+    shop-id: ${YOOKASSA_SHOP_ID}
+    secret-key: ${YOOKASSA_SECRET_KEY}
+    return-url: ${YOOKASSA_RETURN_URL:http://localhost:8080/payments/result}
+    currency: ${YOOKASSA_CURRENCY:RUB}
+    connect-timeout: 10s
+    read-timeout: 30s
+    allowed-webhook-ips: ${YOOKASSA_ALLOWED_WEBHOOK_IPS:}
