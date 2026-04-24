@@ -35,6 +35,7 @@ public class InvestmentContractService {
     private static final String WITHDRAWN_STATUS = "withdrawn";
     private static final String REJECTED_STATUS = "rejected";
     private static final String APPROVED_STATUS = "approved";
+    private static final String COMPLETED_STATUS = "completed";
 
     private static final int WITHDRAWAL_PERIOD_DAYS = 5;
     private static final String PLATFORM_ACCOUNT_NUMBER = "PLATFORM-001";
@@ -129,41 +130,18 @@ public class InvestmentContractService {
                             .formatted(availableBalance, totalCharge, amount, commissionAmount));
         }
 
-        account.setBalance(account.getBalance().subtract(totalCharge));
+        account.setHoldAmount(account.getHoldAmount().add(totalCharge));
         personalAccountRepository.save(account);
 
-        AccountTransaction investTx = AccountTransaction.builder()
+        AccountTransaction holdTx = AccountTransaction.builder()
                 .personalAccount(account)
-                .transactionType(TransactionType.TRANSFER_OUT)
-                .amount(amount)
-                .balanceAfter(account.getBalance().add(commissionAmount))
-                .description("Инвестирование по ИП #%d: %s".formatted(proposal.getId(), proposal.getTitle()))
-                .build();
-        transactionRepository.save(investTx);
-
-        AccountTransaction commissionTx = AccountTransaction.builder()
-                .personalAccount(account)
-                .transactionType(TransactionType.COMMISSION)
-                .amount(commissionAmount)
+                .transactionType(TransactionType.HOLD)
+                .amount(totalCharge)
                 .balanceAfter(account.getBalance())
-                .description("Комиссия платформы по ИП #%d: %s".formatted(proposal.getId(), proposal.getTitle()))
+                .description("Блокировка средств по ИП #%d: %s (инвестиция: %s, комиссия: %s)"
+                        .formatted(proposal.getId(), proposal.getTitle(), amount, commissionAmount))
                 .build();
-        transactionRepository.save(commissionTx);
-
-        PersonalAccount platformAccount = personalAccountRepository
-                .findByAccountNumber(PLATFORM_ACCOUNT_NUMBER)
-                .orElseThrow(() -> new IllegalStateException("Счёт платформы не найден"));
-        platformAccount.setBalance(platformAccount.getBalance().add(commissionAmount));
-        personalAccountRepository.save(platformAccount);
-
-        AccountTransaction platformTx = AccountTransaction.builder()
-                .personalAccount(platformAccount)
-                .transactionType(TransactionType.TRANSFER_IN)
-                .amount(commissionAmount)
-                .balanceAfter(platformAccount.getBalance())
-                .description("Комиссия по договору инвестирования, ИП #%d".formatted(proposal.getId()))
-                .build();
-        transactionRepository.save(platformTx);
+        transactionRepository.save(holdTx);
 
         proposal.setCollectedAmount(proposal.getCollectedAmount().add(amount));
         proposalRepository.save(proposal);
@@ -187,7 +165,7 @@ public class InvestmentContractService {
                 .build();
         contract = contractRepository.save(contract);
 
-        saveStatusHistory(contract, null, reviewingStatus, investorUser, "Договор создан, средства списаны");
+        saveStatusHistory(contract, null, reviewingStatus, investorUser, "Договор создан, средства заблокированы");
 
         return toResponseDto(contract);
     }
@@ -220,7 +198,7 @@ public class InvestmentContractService {
         ContractStatus withdrawnStatus = contractStatusRepository.findByCode(WITHDRAWN_STATUS)
                 .orElseThrow(() -> new IllegalStateException("Статус 'withdrawn' не найден"));
 
-        refundToInvestor(contract, "Возврат по отзыву договора #%s".formatted(contract.getContractNumber()));
+        releaseHoldToInvestor(contract, "Разблокировка по отзыву договора #%s".formatted(contract.getContractNumber()));
 
         proposal.setCollectedAmount(proposal.getCollectedAmount().subtract(contract.getAmount()));
         proposalRepository.save(proposal);
@@ -357,8 +335,8 @@ public class InvestmentContractService {
         if (REJECTED_STATUS.equals(dto.statusCode())) {
             contract.setRejectionReason(dto.comment());
 
-            refundToInvestor(contract,
-                    "Возврат по отклонению договора #%s".formatted(contract.getContractNumber()));
+            releaseHoldToInvestor(contract,
+                    "Разблокировка по отклонению договора #%s".formatted(contract.getContractNumber()));
 
             InvestmentProposal proposal = contract.getProposal();
             proposal.setCollectedAmount(proposal.getCollectedAmount().subtract(contract.getAmount()));
@@ -369,6 +347,105 @@ public class InvestmentContractService {
 
         User changedBy = userRepository.findById(operatorUserId).orElseThrow();
         saveStatusHistory(contract, oldStatus, newStatus, changedBy, dto.comment());
+
+        return toResponseDto(contract);
+    }
+
+    /**
+     * Завершение договора оператором: approved → completed.
+     * Разблокировка средств у инвестора, перевод суммы эмитенту, комиссии — платформе.
+     */
+    @Transactional
+    public InvestmentContractResponseDto complete(Long contractId, Long operatorUserId) {
+        InvestmentContract contract = findContractOrThrow(contractId);
+
+        if (!APPROVED_STATUS.equals(contract.getStatus().getCode())) {
+            throw new InvalidProposalStatusTransitionException(
+                    "Завершение возможно только для договоров в статусе 'Одобрен'. Текущий: '%s'"
+                            .formatted(contract.getStatus().getName()));
+        }
+
+        Operator operator = operatorRepository.findByUserId(operatorUserId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Оператор для пользователя с ID %d не найден".formatted(operatorUserId)));
+
+        ContractStatus oldStatus = contract.getStatus();
+        ContractStatus completedStatus = contractStatusRepository.findByCode(COMPLETED_STATUS)
+                .orElseThrow(() -> new IllegalStateException("Статус 'completed' не найден"));
+
+        BigDecimal amount = contract.getAmount();
+        BigDecimal commission = contract.getCommissionAmount();
+        BigDecimal totalCharge = amount.add(commission);
+
+        PersonalAccount investorAccount = contract.getInvestor().getPersonalAccount();
+        investorAccount.setHoldAmount(investorAccount.getHoldAmount().subtract(totalCharge));
+        investorAccount.setBalance(investorAccount.getBalance().subtract(totalCharge));
+        personalAccountRepository.save(investorAccount);
+
+        AccountTransaction releaseTx = AccountTransaction.builder()
+                .personalAccount(investorAccount)
+                .transactionType(TransactionType.RELEASE)
+                .amount(totalCharge)
+                .balanceAfter(investorAccount.getBalance().add(totalCharge))
+                .description("Разблокировка при завершении договора #%s".formatted(contract.getContractNumber()))
+                .build();
+        transactionRepository.save(releaseTx);
+
+        AccountTransaction investTx = AccountTransaction.builder()
+                .personalAccount(investorAccount)
+                .transactionType(TransactionType.TRANSFER_OUT)
+                .amount(amount)
+                .balanceAfter(investorAccount.getBalance().add(commission))
+                .description("Инвестирование по ИП #%d, договор #%s"
+                        .formatted(contract.getProposal().getId(), contract.getContractNumber()))
+                .build();
+        transactionRepository.save(investTx);
+
+        AccountTransaction commissionTx = AccountTransaction.builder()
+                .personalAccount(investorAccount)
+                .transactionType(TransactionType.COMMISSION)
+                .amount(commission)
+                .balanceAfter(investorAccount.getBalance())
+                .description("Комиссия платформы по договору #%s".formatted(contract.getContractNumber()))
+                .build();
+        transactionRepository.save(commissionTx);
+
+        PersonalAccount emitentAccount = contract.getProposal().getEmitent().getPersonalAccount();
+        emitentAccount.setBalance(emitentAccount.getBalance().add(amount));
+        personalAccountRepository.save(emitentAccount);
+
+        AccountTransaction emitentTx = AccountTransaction.builder()
+                .personalAccount(emitentAccount)
+                .transactionType(TransactionType.TRANSFER_IN)
+                .amount(amount)
+                .balanceAfter(emitentAccount.getBalance())
+                .description("Поступление по договору #%s, ИП #%d"
+                        .formatted(contract.getContractNumber(), contract.getProposal().getId()))
+                .build();
+        transactionRepository.save(emitentTx);
+
+        PersonalAccount platformAccount = personalAccountRepository
+                .findByAccountNumber(PLATFORM_ACCOUNT_NUMBER)
+                .orElseThrow(() -> new IllegalStateException("Счёт платформы не найден"));
+        platformAccount.setBalance(platformAccount.getBalance().add(commission));
+        personalAccountRepository.save(platformAccount);
+
+        AccountTransaction platformTx = AccountTransaction.builder()
+                .personalAccount(platformAccount)
+                .transactionType(TransactionType.TRANSFER_IN)
+                .amount(commission)
+                .balanceAfter(platformAccount.getBalance())
+                .description("Комиссия по договору #%s".formatted(contract.getContractNumber()))
+                .build();
+        transactionRepository.save(platformTx);
+
+        contract.setStatus(completedStatus);
+        contract.setCompletedAt(LocalDateTime.now());
+        contract = contractRepository.save(contract);
+
+        User changedBy = userRepository.findById(operatorUserId).orElseThrow();
+        saveStatusHistory(contract, oldStatus, completedStatus, changedBy,
+                "Договор завершён оператором #%d, средства переведены эмитенту".formatted(operator.getId()));
 
         return toResponseDto(contract);
     }
@@ -385,45 +462,21 @@ public class InvestmentContractService {
 
     // ========================= Private =========================
 
-    private void refundToInvestor(InvestmentContract contract, String description) {
-        BigDecimal refundTotal = contract.getAmount().add(contract.getCommissionAmount());
+    private void releaseHoldToInvestor(InvestmentContract contract, String description) {
+        BigDecimal holdTotal = contract.getAmount().add(contract.getCommissionAmount());
 
         PersonalAccount account = contract.getInvestor().getPersonalAccount();
-        account.setBalance(account.getBalance().add(refundTotal));
+        account.setHoldAmount(account.getHoldAmount().subtract(holdTotal));
         personalAccountRepository.save(account);
 
-        AccountTransaction refundTx = AccountTransaction.builder()
+        AccountTransaction releaseTx = AccountTransaction.builder()
                 .personalAccount(account)
-                .transactionType(TransactionType.TRANSFER_IN)
-                .amount(contract.getAmount())
-                .balanceAfter(account.getBalance().subtract(contract.getCommissionAmount()))
+                .transactionType(TransactionType.RELEASE)
+                .amount(holdTotal)
+                .balanceAfter(account.getBalance())
                 .description(description)
                 .build();
-        transactionRepository.save(refundTx);
-
-        AccountTransaction commissionRefundTx = AccountTransaction.builder()
-                .personalAccount(account)
-                .transactionType(TransactionType.COMMISSION)
-                .amount(contract.getCommissionAmount())
-                .balanceAfter(account.getBalance())
-                .description("Возврат комиссии: " + description)
-                .build();
-        transactionRepository.save(commissionRefundTx);
-
-        PersonalAccount platformAccount = personalAccountRepository
-                .findByAccountNumber(PLATFORM_ACCOUNT_NUMBER)
-                .orElseThrow(() -> new IllegalStateException("Счёт платформы не найден"));
-        platformAccount.setBalance(platformAccount.getBalance().subtract(contract.getCommissionAmount()));
-        personalAccountRepository.save(platformAccount);
-
-        AccountTransaction platformRefundTx = AccountTransaction.builder()
-                .personalAccount(platformAccount)
-                .transactionType(TransactionType.COMMISSION)
-                .amount(contract.getCommissionAmount())
-                .balanceAfter(platformAccount.getBalance())
-                .description("Возврат комиссии по договору #%s".formatted(contract.getContractNumber()))
-                .build();
-        transactionRepository.save(platformRefundTx);
+        transactionRepository.save(releaseTx);
     }
 
     private void verifyInvestorOwnership(InvestmentContract contract, Long investorUserId) {

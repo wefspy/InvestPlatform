@@ -58,9 +58,9 @@ public class InvestmentContractRestController {
     }
 
     @Operation(summary = "Создание договора инвестирования",
-            description = "Инвестор создаёт ДИ по активному ИП. Средства списываются со счёта сразу, "
+            description = "Инвестор создаёт ДИ по активному ИП. Средства блокируются на счёте (hold), "
                     + "договор отправляется на модерацию оператору. Один инвестор — один договор на одно ИП.")
-    @ApiResponse(responseCode = "201", description = "Договор создан, средства списаны", content = {
+    @ApiResponse(responseCode = "201", description = "Договор создан, средства заблокированы", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = InvestmentContractResponseDto.class))
     })
     @ApiResponse(responseCode = "400", description = "Некорректные параметры (ИП не активно, сумма вне диапазона, дубликат)", content = {
@@ -80,8 +80,8 @@ public class InvestmentContractRestController {
 
     @Operation(summary = "Отзыв договора инвестирования",
             description = "Инвестор может отозвать договор в течение 5 дней с момента создания, "
-                    + "но не позднее срока действия ИП. Средства возвращаются на счёт.")
-    @ApiResponse(responseCode = "200", description = "Договор отозван, средства возвращены", content = {
+                    + "но не позднее срока действия ИП. Блокировка средств снимается.")
+    @ApiResponse(responseCode = "200", description = "Договор отозван, блокировка средств снята", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = InvestmentContractResponseDto.class))
     })
     @ApiResponse(responseCode = "400", description = "Отзыв невозможен (срок истёк или недопустимый статус)", content = {
@@ -180,7 +180,7 @@ public class InvestmentContractRestController {
     @Operation(summary = "Модерация договора оператором",
             description = "Оператор одобряет (approved) или отклоняет (rejected) ДИ. "
                     + "Только оператор, за которым закреплён договор, может вынести решение. "
-                    + "При отклонении средства возвращаются инвестору.")
+                    + "При отклонении блокировка средств снимается.")
     @ApiResponse(responseCode = "200", description = "Решение принято", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = InvestmentContractResponseDto.class))
     })
@@ -194,5 +194,23 @@ public class InvestmentContractRestController {
             @RequestBody @Valid ChangeProposalStatusDto dto,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(contractService.resolveReview(id, dto, userDetails.getId()));
+    }
+
+    @Operation(summary = "Завершение договора инвестирования",
+            description = "Оператор переводит одобренный (approved) ДИ в статус 'completed'. "
+                    + "Сумма инвестиции списывается со счёта инвестора и зачисляется на счёт эмитента, "
+                    + "комиссия поступает на счёт платформы.")
+    @ApiResponse(responseCode = "200", description = "Договор завершён, средства переведены эмитенту", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestmentContractResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Договор не в статусе 'Одобрен'", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasRole('OPERATOR')")
+    public ResponseEntity<InvestmentContractResponseDto> complete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(contractService.complete(id, userDetails.getId()));
     }
 }
