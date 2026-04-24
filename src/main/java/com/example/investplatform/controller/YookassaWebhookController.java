@@ -4,6 +4,7 @@ import com.example.investplatform.application.dto.payment.yookassa.YookassaWebho
 import com.example.investplatform.application.service.YookassaWebhookService;
 import com.example.investplatform.infrastructure.config.property.YookassaProperties;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/webhooks/yookassa")
 @RequiredArgsConstructor
+@Tag(name = "Webhooks", description = "Публичные эндпоинты для приёма уведомлений от внешних сервисов")
 public class YookassaWebhookController {
 
     private final YookassaWebhookService webhookService;

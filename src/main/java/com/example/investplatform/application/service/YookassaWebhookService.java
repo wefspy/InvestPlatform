@@ -5,8 +5,8 @@ import com.example.investplatform.application.exception.WebhookProcessingExcepti
 import com.example.investplatform.infrastructure.repository.YukassaWebhookRepository;
 import com.example.investplatform.model.entity.payment.YukassaWebhook;
 import com.example.investplatform.model.enums.WebhookProcessingStatus;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,7 +51,7 @@ public class YookassaWebhookService {
                 .objectId(objectId)
                 .payload(objectMapper.convertValue(
                         notification,
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+                        new tools.jackson.core.type.TypeReference<Map<String, Object>>() {}))
                 .processingStatus(WebhookProcessingStatus.PENDING)
                 .attempts(1)
                 .build();

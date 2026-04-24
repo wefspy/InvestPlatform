@@ -23,8 +23,8 @@ import com.example.investplatform.model.entity.payment.Payment;
 import com.example.investplatform.model.enums.PaymentDirection;
 import com.example.investplatform.model.enums.PaymentType;
 import com.example.investplatform.model.enums.TransactionType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -257,11 +257,11 @@ public class PaymentService {
     }
 
     private Map<String, Object> toMap(YookassaPaymentResponse response) {
-        return objectMapper.convertValue(response, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        return objectMapper.convertValue(response, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
     }
 
     private Map<String, Object> jsonNodeToMap(JsonNode node) {
-        return objectMapper.convertValue(node, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        return objectMapper.convertValue(node, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
     }
 
     private PaymentResponseDto toResponseDto(Payment payment, String confirmationUrl) {
