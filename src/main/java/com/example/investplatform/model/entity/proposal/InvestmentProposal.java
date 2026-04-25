@@ -122,6 +122,9 @@ public class InvestmentProposal {
     @Column(name = "collected_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal collectedAmount;
 
+    @Column(name = "reserved_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal reservedAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private Operator reviewedBy;

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -35,5 +37,28 @@ public class ProposalLockScheduler {
         if (released > 0) {
             log.info("Освобождено {} ДИ с просроченной блокировкой оператора", released);
         }
+    }
+
+    /**
+     * Раз в час проверяет активные ИП с истёкшим сроком и закрывает их
+     * (completed/failed) с каскадом на договоры. Каждое ИП в своей транзакции,
+     * чтобы сбой по одному не блокировал остальные.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    public void closeExpiredProposals() {
+        List<Long> ids = proposalService.findExpiredActiveProposalIds();
+        if (ids.isEmpty()) {
+            return;
+        }
+        int closed = 0;
+        for (Long id : ids) {
+            try {
+                proposalService.closeExpiredProposal(id);
+                closed++;
+            } catch (Exception e) {
+                log.error("Не удалось автоматически закрыть ИП {}: {}", id, e.getMessage(), e);
+            }
+        }
+        log.info("Автоматически закрыто {} из {} просроченных ИП", closed, ids.size());
     }
 }

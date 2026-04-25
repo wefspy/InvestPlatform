@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -126,4 +128,91 @@ public interface InvestmentProposalRepository extends JpaRepository<InvestmentPr
               AND status_id = (SELECT id FROM proposal_statuses WHERE code = 'reviewing')
             """, nativeQuery = true)
     int releaseExpiredLocks(@Param("expiredBefore") LocalDateTime expiredBefore);
+
+    /**
+     * Атомарное резервирование суммы под новый ДИ.
+     * WHERE-условие гарантирует:
+     *   - ИП в статусе active;
+     *   - срок ИП не истёк;
+     *   - суммарный кэп (collected + reserved + amount) не превышает max.
+     * При гонке двух инвесторов один получит updatedRows=1, второй — 0.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE investment_proposals
+            SET reserved_amount = reserved_amount + :amount,
+                version = version + 1
+            WHERE id = :proposalId
+              AND status_id = (SELECT id FROM proposal_statuses WHERE code = 'active')
+              AND proposal_end_date >= CURRENT_DATE
+              AND collected_amount + reserved_amount + :amount <= max_investment_amount
+            """, nativeQuery = true)
+    int reserveAmount(@Param("proposalId") Long proposalId, @Param("amount") BigDecimal amount);
+
+    /**
+     * Освобождение зарезервированной суммы (отзыв/отклонение reviewing-договора, либо отмена при закрытии ИП).
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE investment_proposals
+            SET reserved_amount = reserved_amount - :amount,
+                version = version + 1
+            WHERE id = :proposalId
+            """, nativeQuery = true)
+    int releaseReservedAmount(@Param("proposalId") Long proposalId, @Param("amount") BigDecimal amount);
+
+    /**
+     * Подтверждение резерва (reviewing → approved): резерв уменьшается, collected растёт.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE investment_proposals
+            SET reserved_amount = reserved_amount - :amount,
+                collected_amount = collected_amount + :amount,
+                version = version + 1
+            WHERE id = :proposalId
+            """, nativeQuery = true)
+    int confirmReservedAmount(@Param("proposalId") Long proposalId, @Param("amount") BigDecimal amount);
+
+    /**
+     * Уменьшение collected (отзыв approved-договора, либо неуспешное закрытие ИП).
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE investment_proposals
+            SET collected_amount = collected_amount - :amount,
+                version = version + 1
+            WHERE id = :proposalId
+            """, nativeQuery = true)
+    int releaseCollectedAmount(@Param("proposalId") Long proposalId, @Param("amount") BigDecimal amount);
+
+    /**
+     * ID активных ИП с истёкшим сроком — для пакетного автозакрытия планировщиком.
+     */
+    @Query("""
+            SELECT p.id FROM InvestmentProposal p
+            WHERE p.status.code = 'active'
+              AND p.proposalEndDate < :today
+            """)
+    List<Long> findExpiredActiveProposalIds(@Param("today") LocalDate today);
+
+    /**
+     * Перевод ИП в финальный статус (completed/failed) с проставлением closed_at.
+     * Делается нативным UPDATE'ом, чтобы не конфликтовать с @Version после каскадных
+     * нативных операций над тем же ИП внутри той же транзакции.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE investment_proposals
+            SET status_id = (SELECT id FROM proposal_statuses WHERE code = :statusCode),
+                closed_at = :closedAt,
+                locked_by = NULL,
+                lock_heartbeat_at = NULL,
+                version = version + 1
+            WHERE id = :proposalId
+              AND status_id = (SELECT id FROM proposal_statuses WHERE code = 'active')
+            """, nativeQuery = true)
+    int closeProposal(@Param("proposalId") Long proposalId,
+                      @Param("statusCode") String statusCode,
+                      @Param("closedAt") LocalDateTime closedAt);
 }

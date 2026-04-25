@@ -5,6 +5,7 @@ import com.example.investplatform.application.exception.InvestmentProposalNotFou
 import com.example.investplatform.application.exception.InvalidProposalStatusTransitionException;
 import com.example.investplatform.application.exception.ProposalAlreadyClaimedException;
 import com.example.investplatform.infrastructure.repository.*;
+import com.example.investplatform.model.entity.contract.InvestmentContract;
 import com.example.investplatform.model.entity.emitent.Emitent;
 import com.example.investplatform.model.entity.proposal.*;
 import com.example.investplatform.model.entity.user.Operator;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ public class InvestmentProposalService {
     private static final String REVIEWING_STATUS = "reviewing";
     private static final String REJECTED_STATUS = "rejected";
     private static final String ACTIVE_STATUS = "active";
+    private static final String COMPLETED_STATUS = "completed";
+    private static final String FAILED_STATUS = "failed";
+    private static final String APPROVED_STATUS = "approved";
 
     private static final Map<String, Set<String>> EMITENT_TRANSITIONS = Map.of(
             DRAFT_STATUS, Set.of(PENDING_STATUS),
@@ -38,6 +43,7 @@ public class InvestmentProposalService {
     );
 
     private final InvestmentProposalRepository proposalRepository;
+    private final InvestmentContractRepository contractRepository;
     private final ProposalStatusRepository statusRepository;
     private final InvestmentMethodRepository investmentMethodRepository;
     private final ProposalStatusHistoryRepository statusHistoryRepository;
@@ -47,6 +53,7 @@ public class InvestmentProposalService {
     private final OperatorRepository operatorRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final InvestmentContractService contractService;
 
     // ========================= Эмитент =========================
 
@@ -94,6 +101,7 @@ public class InvestmentProposalService {
                 .applicableLaw(dto.applicableLaw() != null ? dto.applicableLaw() : "Российская Федерация")
                 .suspensiveConditions(dto.suspensiveConditions())
                 .collectedAmount(BigDecimal.ZERO)
+                .reservedAmount(BigDecimal.ZERO)
                 .build();
 
         proposal = proposalRepository.save(proposal);
@@ -399,6 +407,82 @@ public class InvestmentProposalService {
     public int releaseExpiredLocks() {
         LocalDateTime expiredBefore = LocalDateTime.now().minusMinutes(5);
         return proposalRepository.releaseExpiredLocks(expiredBefore);
+    }
+
+    // ========================= Автозакрытие по истечении срока =========================
+
+    /**
+     * ID активных ИП с истёкшим сроком действия.
+     * Возвращается планировщику, который затем закрывает каждое в отдельной транзакции,
+     * чтобы сбой по одному ИП не откатывал остальные.
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findExpiredActiveProposalIds() {
+        return proposalRepository.findExpiredActiveProposalIds(LocalDate.now());
+    }
+
+    /**
+     * Автоматическое закрытие ИП по истечении срока действия.
+     * Критерий успеха: collected_amount &gt;= min_investment_amount (т.е. достаточно одобренных продаж).
+     *
+     * Каскад на договоры:
+     *   - reviewing → rejected (оператор не успел рассмотреть до окончания срока), холд возвращается;
+     *   - approved + успех ИП → completed (перевод средств эмитенту);
+     *   - approved + неуспех ИП → failed (холд возвращается инвестору);
+     *   - completed/rejected/withdrawn/failed остаются как есть.
+     */
+    @Transactional
+    public void closeExpiredProposal(Long proposalId) {
+        InvestmentProposal proposal = findProposalOrThrow(proposalId);
+
+        if (!ACTIVE_STATUS.equals(proposal.getStatus().getCode())) {
+            return;
+        }
+        if (!LocalDate.now().isAfter(proposal.getProposalEndDate())) {
+            return;
+        }
+
+        boolean successful = proposal.getCollectedAmount().compareTo(proposal.getMinInvestmentAmount()) >= 0;
+        String resultCode = successful ? COMPLETED_STATUS : FAILED_STATUS;
+        String comment = successful
+                ? "Автоматическое успешное закрытие ИП: собрано %s из минимума %s"
+                        .formatted(proposal.getCollectedAmount(), proposal.getMinInvestmentAmount())
+                : "Автоматическое неуспешное закрытие ИП: собрано %s, минимум %s"
+                        .formatted(proposal.getCollectedAmount(), proposal.getMinInvestmentAmount());
+
+        // Каскад по договорам.
+        List<InvestmentContract> contracts = contractRepository.findByProposalIdAndStatusCodes(
+                proposalId, List.of(REVIEWING_STATUS, APPROVED_STATUS));
+
+        for (InvestmentContract contract : contracts) {
+            String code = contract.getStatus().getCode();
+            if (REVIEWING_STATUS.equals(code)) {
+                // Оператор не успел рассмотреть — независимо от исхода ИП, холд возвращается.
+                contractService.rejectAsSystem(contract.getId(),
+                        "Срок ИП истёк, оператор не успел рассмотреть договор");
+            } else if (APPROVED_STATUS.equals(code)) {
+                if (successful) {
+                    contractService.completeAsSystem(contract.getId(),
+                            "Автоматическое завершение договора по успешному закрытию ИП");
+                } else {
+                    contractService.failAsSystem(contract.getId(),
+                            "Автоматический возврат средств по неуспешному закрытию ИП");
+                }
+            }
+        }
+
+        ProposalStatus oldStatus = proposal.getStatus();
+        ProposalStatus newStatus = statusRepository.findByCode(resultCode)
+                .orElseThrow(() -> new IllegalStateException("Статус '%s' не найден".formatted(resultCode)));
+
+        // Нативный UPDATE — обходит @Version, который уже инкрементнулся каскадными операциями.
+        int updated = proposalRepository.closeProposal(proposalId, resultCode, LocalDateTime.now());
+        if (updated == 0) {
+            // ИП уже не active — параллельно закрыто/изменено, история не пишется.
+            return;
+        }
+
+        saveStatusHistory(proposal, oldStatus, newStatus, null, comment);
     }
 
     // ========================= Администратор =========================

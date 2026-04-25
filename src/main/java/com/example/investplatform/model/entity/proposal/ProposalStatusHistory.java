@@ -33,7 +33,7 @@ public class ProposalStatusHistory {
     private ProposalStatus newStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "changed_by", nullable = false)
+    @JoinColumn(name = "changed_by")
     private User changedBy;
 
     @Column(name = "comment", columnDefinition = "text")

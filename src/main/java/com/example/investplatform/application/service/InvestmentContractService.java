@@ -36,6 +36,7 @@ public class InvestmentContractService {
     private static final String REJECTED_STATUS = "rejected";
     private static final String APPROVED_STATUS = "approved";
     private static final String COMPLETED_STATUS = "completed";
+    private static final String FAILED_STATUS = "failed";
 
     private static final int WITHDRAWAL_PERIOD_DAYS = 5;
     private static final String PLATFORM_ACCOUNT_NUMBER = "PLATFORM-001";
@@ -116,18 +117,24 @@ public class InvestmentContractService {
         BigDecimal commissionAmount = commissionService.calculate(amount);
         BigDecimal totalCharge = amount.add(commissionAmount);
 
-        BigDecimal remainingCapacity = proposal.getMaxInvestmentAmount().subtract(proposal.getCollectedAmount());
-        if (amount.compareTo(remainingCapacity) > 0) {
-            throw new IllegalArgumentException(
-                    "Сумма превышает оставшийся лимит сбора (%s)".formatted(remainingCapacity));
-        }
-
         PersonalAccount account = investor.getPersonalAccount();
         BigDecimal availableBalance = account.getBalance().subtract(account.getHoldAmount());
         if (availableBalance.compareTo(totalCharge) < 0) {
             throw new InsufficientFundsException(
                     "Недостаточно средств на счёте. Доступно: %s, требуется: %s (инвестиция: %s, комиссия: %s)"
                             .formatted(availableBalance, totalCharge, amount, commissionAmount));
+        }
+
+        // Атомарное резервирование под кэп: collected + reserved + amount <= max.
+        // При гонке двух инвесторов один получит updatedRows=1, второй — 0.
+        int reserved = proposalRepository.reserveAmount(proposal.getId(), amount);
+        if (reserved == 0) {
+            BigDecimal remainingCapacity = proposal.getMaxInvestmentAmount()
+                    .subtract(proposal.getCollectedAmount())
+                    .subtract(proposal.getReservedAmount());
+            throw new IllegalArgumentException(
+                    "Сумма превышает оставшийся лимит сбора (%s) или ИП больше недоступно для инвестиций"
+                            .formatted(remainingCapacity.max(BigDecimal.ZERO)));
         }
 
         account.setHoldAmount(account.getHoldAmount().add(totalCharge));
@@ -142,9 +149,6 @@ public class InvestmentContractService {
                         .formatted(proposal.getId(), proposal.getTitle(), amount, commissionAmount))
                 .build();
         transactionRepository.save(holdTx);
-
-        proposal.setCollectedAmount(proposal.getCollectedAmount().add(amount));
-        proposalRepository.save(proposal);
 
         ContractStatus reviewingStatus = contractStatusRepository.findByCode(REVIEWING_STATUS)
                 .orElseThrow(() -> new IllegalStateException("Статус 'reviewing' не найден"));
@@ -200,8 +204,12 @@ public class InvestmentContractService {
 
         releaseHoldToInvestor(contract, "Разблокировка по отзыву договора #%s".formatted(contract.getContractNumber()));
 
-        proposal.setCollectedAmount(proposal.getCollectedAmount().subtract(contract.getAmount()));
-        proposalRepository.save(proposal);
+        // reviewing → reserved уменьшается; approved → collected уменьшается.
+        if (REVIEWING_STATUS.equals(oldStatus.getCode())) {
+            proposalRepository.releaseReservedAmount(proposal.getId(), contract.getAmount());
+        } else {
+            proposalRepository.releaseCollectedAmount(proposal.getId(), contract.getAmount());
+        }
 
         contract.setStatus(withdrawnStatus);
         contract.setWithdrawalReason(dto.reason());
@@ -332,15 +340,17 @@ public class InvestmentContractService {
         contract.setLockedBy(null);
         contract.setLockHeartbeatAt(null);
 
+        InvestmentProposal proposal = contract.getProposal();
         if (REJECTED_STATUS.equals(dto.statusCode())) {
             contract.setRejectionReason(dto.comment());
 
             releaseHoldToInvestor(contract,
                     "Разблокировка по отклонению договора #%s".formatted(contract.getContractNumber()));
 
-            InvestmentProposal proposal = contract.getProposal();
-            proposal.setCollectedAmount(proposal.getCollectedAmount().subtract(contract.getAmount()));
-            proposalRepository.save(proposal);
+            proposalRepository.releaseReservedAmount(proposal.getId(), contract.getAmount());
+        } else {
+            // approved: резерв подтверждается → переходит в collected.
+            proposalRepository.confirmReservedAmount(proposal.getId(), contract.getAmount());
         }
 
         contract = contractRepository.save(contract);
@@ -369,7 +379,104 @@ public class InvestmentContractService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Оператор для пользователя с ID %d не найден".formatted(operatorUserId)));
 
+        User changedBy = userRepository.findById(operatorUserId).orElseThrow();
         ContractStatus oldStatus = contract.getStatus();
+        contract = doCompleteContract(contract);
+        saveStatusHistory(contract, oldStatus, contract.getStatus(), changedBy,
+                "Договор завершён оператором #%d, средства переведены эмитенту".formatted(operator.getId()));
+
+        return toResponseDto(contract);
+    }
+
+    // ========================= Системные переходы (каскад при закрытии ИП) =========================
+
+    /**
+     * Системное завершение approved-договора при успешном закрытии ИП.
+     * Та же логика, что и complete(), но без оператора.
+     */
+    @Transactional
+    public void completeAsSystem(Long contractId, String comment) {
+        InvestmentContract contract = findContractOrThrow(contractId);
+        if (!APPROVED_STATUS.equals(contract.getStatus().getCode())) {
+            return;
+        }
+        ContractStatus oldStatus = contract.getStatus();
+        contract = doCompleteContract(contract);
+        saveStatusHistory(contract, oldStatus, contract.getStatus(), null, comment);
+    }
+
+    /**
+     * Системный перевод договора в failed: средства возвращаются инвестору,
+     * collected/reserved у ИП уменьшается. Используется при неуспешном закрытии ИП.
+     */
+    @Transactional
+    public void failAsSystem(Long contractId, String comment) {
+        InvestmentContract contract = findContractOrThrow(contractId);
+        String currentCode = contract.getStatus().getCode();
+        if (!REVIEWING_STATUS.equals(currentCode) && !APPROVED_STATUS.equals(currentCode)) {
+            return;
+        }
+
+        ContractStatus oldStatus = contract.getStatus();
+        ContractStatus failedStatus = contractStatusRepository.findByCode(FAILED_STATUS)
+                .orElseThrow(() -> new IllegalStateException("Статус 'failed' не найден"));
+
+        releaseHoldToInvestor(contract,
+                "Возврат средств по неуспешному закрытию ИП, договор #%s".formatted(contract.getContractNumber()));
+
+        InvestmentProposal proposal = contract.getProposal();
+        if (REVIEWING_STATUS.equals(currentCode)) {
+            proposalRepository.releaseReservedAmount(proposal.getId(), contract.getAmount());
+        } else {
+            proposalRepository.releaseCollectedAmount(proposal.getId(), contract.getAmount());
+        }
+
+        contract.setStatus(failedStatus);
+        contract.setFailedAt(LocalDateTime.now());
+        contract.setLockedBy(null);
+        contract.setLockHeartbeatAt(null);
+        contract = contractRepository.save(contract);
+
+        saveStatusHistory(contract, oldStatus, failedStatus, null, comment);
+    }
+
+    /**
+     * Системное отклонение reviewing-договора при успешном закрытии ИП:
+     * оператор не успел рассмотреть до окончания срока. Средства возвращаются инвестору.
+     */
+    @Transactional
+    public void rejectAsSystem(Long contractId, String comment) {
+        InvestmentContract contract = findContractOrThrow(contractId);
+        if (!REVIEWING_STATUS.equals(contract.getStatus().getCode())) {
+            return;
+        }
+
+        ContractStatus oldStatus = contract.getStatus();
+        ContractStatus rejectedStatus = contractStatusRepository.findByCode(REJECTED_STATUS)
+                .orElseThrow(() -> new IllegalStateException("Статус 'rejected' не найден"));
+
+        releaseHoldToInvestor(contract,
+                "Возврат средств: оператор не успел рассмотреть, договор #%s"
+                        .formatted(contract.getContractNumber()));
+
+        InvestmentProposal proposal = contract.getProposal();
+        proposalRepository.releaseReservedAmount(proposal.getId(), contract.getAmount());
+
+        contract.setStatus(rejectedStatus);
+        contract.setRejectionReason(comment);
+        contract.setReviewedAt(LocalDateTime.now());
+        contract.setLockedBy(null);
+        contract.setLockHeartbeatAt(null);
+        contract = contractRepository.save(contract);
+
+        saveStatusHistory(contract, oldStatus, rejectedStatus, null, comment);
+    }
+
+    /**
+     * Внутренняя логика завершения approved → completed:
+     * перевод холда инвестора эмитенту, комиссии — платформе.
+     */
+    private InvestmentContract doCompleteContract(InvestmentContract contract) {
         ContractStatus completedStatus = contractStatusRepository.findByCode(COMPLETED_STATUS)
                 .orElseThrow(() -> new IllegalStateException("Статус 'completed' не найден"));
 
@@ -441,13 +548,7 @@ public class InvestmentContractService {
 
         contract.setStatus(completedStatus);
         contract.setCompletedAt(LocalDateTime.now());
-        contract = contractRepository.save(contract);
-
-        User changedBy = userRepository.findById(operatorUserId).orElseThrow();
-        saveStatusHistory(contract, oldStatus, completedStatus, changedBy,
-                "Договор завершён оператором #%d, средства переведены эмитенту".formatted(operator.getId()));
-
-        return toResponseDto(contract);
+        return contractRepository.save(contract);
     }
 
     /**
