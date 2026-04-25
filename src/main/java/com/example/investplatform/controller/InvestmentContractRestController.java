@@ -196,21 +196,4 @@ public class InvestmentContractRestController {
         return ResponseEntity.ok(contractService.resolveReview(id, dto, userDetails.getId()));
     }
 
-    @Operation(summary = "Завершение договора инвестирования",
-            description = "Оператор переводит одобренный (approved) ДИ в статус 'completed'. "
-                    + "Сумма инвестиции списывается со счёта инвестора и зачисляется на счёт эмитента, "
-                    + "комиссия поступает на счёт платформы.")
-    @ApiResponse(responseCode = "200", description = "Договор завершён, средства переведены эмитенту", content = {
-            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestmentContractResponseDto.class))
-    })
-    @ApiResponse(responseCode = "400", description = "Договор не в статусе 'Одобрен'", content = {
-            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
-    })
-    @PatchMapping("/{id}/complete")
-    @PreAuthorize("hasRole('OPERATOR')")
-    public ResponseEntity<InvestmentContractResponseDto> complete(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        return ResponseEntity.ok(contractService.complete(id, userDetails.getId()));
-    }
 }

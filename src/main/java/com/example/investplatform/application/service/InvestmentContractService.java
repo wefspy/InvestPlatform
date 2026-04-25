@@ -361,33 +361,6 @@ public class InvestmentContractService {
         return toResponseDto(contract);
     }
 
-    /**
-     * Завершение договора оператором: approved → completed.
-     * Разблокировка средств у инвестора, перевод суммы эмитенту, комиссии — платформе.
-     */
-    @Transactional
-    public InvestmentContractResponseDto complete(Long contractId, Long operatorUserId) {
-        InvestmentContract contract = findContractOrThrow(contractId);
-
-        if (!APPROVED_STATUS.equals(contract.getStatus().getCode())) {
-            throw new InvalidProposalStatusTransitionException(
-                    "Завершение возможно только для договоров в статусе 'Одобрен'. Текущий: '%s'"
-                            .formatted(contract.getStatus().getName()));
-        }
-
-        Operator operator = operatorRepository.findByUserId(operatorUserId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Оператор для пользователя с ID %d не найден".formatted(operatorUserId)));
-
-        User changedBy = userRepository.findById(operatorUserId).orElseThrow();
-        ContractStatus oldStatus = contract.getStatus();
-        contract = doCompleteContract(contract);
-        saveStatusHistory(contract, oldStatus, contract.getStatus(), changedBy,
-                "Договор завершён оператором #%d, средства переведены эмитенту".formatted(operator.getId()));
-
-        return toResponseDto(contract);
-    }
-
     // ========================= Системные переходы (каскад при закрытии ИП) =========================
 
     /**
