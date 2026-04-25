@@ -13,6 +13,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -50,6 +54,20 @@ public class PaymentRestController {
             @Valid @RequestBody DepositRequestDto request) {
         PaymentResponseDto response = paymentService.initDeposit(userDetails.getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "История платежей текущего пользователя",
+            description = "Возвращает список платежей по лицевому счёту текущего пользователя с пагинацией. По умолчанию сортировка по дате создания (новые первые).")
+    @ApiResponse(responseCode = "200", description = "Список платежей")
+    @ApiResponse(responseCode = "404", description = "Лицевой счёт не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping
+    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT')")
+    public ResponseEntity<Page<PaymentResponseDto>> getHistory(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.getHistory(userDetails.getId(), pageable));
     }
 
     @Operation(summary = "Получение платежа по ID")

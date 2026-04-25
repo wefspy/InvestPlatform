@@ -28,6 +28,8 @@ import tools.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +57,7 @@ public class PaymentService {
     private final InvestorRepository investorRepository;
     private final EmitentRepository emitentRepository;
     private final ObjectMapper objectMapper;
+    private final PaymentReconciliationService reconciliationService;
 
     @Transactional
     public PaymentResponseDto initDeposit(Long userId, DepositRequestDto dto) {
@@ -106,12 +109,19 @@ public class PaymentService {
         return toResponseDto(payment, confirmationToken);
     }
 
-    @Transactional(readOnly = true)
     public PaymentResponseDto getById(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "Платёж с ID %d не найден".formatted(paymentId)));
+        payment = reconciliationService.refreshIfStale(payment);
         return toResponseDto(payment, null);
+    }
+
+    public Page<PaymentResponseDto> getHistory(Long userId, Pageable pageable) {
+        PersonalAccount account = findPersonalAccount(userId);
+
+        return paymentRepository.findByPersonalAccountId(account.getId(), pageable)
+                .map(payment -> toResponseDto(reconciliationService.refreshIfStale(payment), null));
     }
 
     /**
