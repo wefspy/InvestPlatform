@@ -6,38 +6,38 @@
 -- ============================================================
 
 --changeset investplatform:002-mock-users context:dev
--- BCrypt hash of "Test1234!"
+-- BCrypt hash of "12345"
 -- Roles: 1=ROLE_ADMIN, 2=ROLE_OPERATOR, 3=ROLE_EMITENT, 4=ROLE_INVESTOR
 
 -- Operators
 INSERT INTO users (id, email, password_hash, role_id, is_enabled, is_account_non_locked, is_2fa_enabled) VALUES
-    (100, 'operator1@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 2, TRUE, TRUE, FALSE),
-    (101, 'operator2@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 2, TRUE, TRUE, FALSE),
-    (102, 'operator3@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 2, TRUE, TRUE, FALSE),
-    (103, 'operator4@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 2, TRUE, TRUE, FALSE),
-    (104, 'operator5@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 2, TRUE, TRUE, FALSE);
+    (100, 'operator1@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 2, TRUE, TRUE, FALSE),
+    (101, 'operator2@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 2, TRUE, TRUE, FALSE),
+    (102, 'operator3@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 2, TRUE, TRUE, FALSE),
+    (103, 'operator4@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 2, TRUE, TRUE, FALSE),
+    (104, 'operator5@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 2, TRUE, TRUE, FALSE);
 
 -- Emitents
 INSERT INTO users (id, email, password_hash, role_id, is_enabled, is_account_non_locked, is_2fa_enabled) VALUES
-    (200, 'emitent.ooo@investplatform.ru',   '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE),
-    (201, 'emitent.ip@investplatform.ru',    '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE),
-    (202, 'emitent.stroi@investplatform.ru', '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE),
-    (203, 'emitent.agro@investplatform.ru',  '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE),
-    (204, 'emitent.kuzn@investplatform.ru',  '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE),
-    (205, 'emitent.med@investplatform.ru',   '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 3, TRUE, TRUE, FALSE);
+    (200, 'emitent.ooo@investplatform.ru',   '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE),
+    (201, 'emitent.ip@investplatform.ru',    '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE),
+    (202, 'emitent.stroi@investplatform.ru', '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE),
+    (203, 'emitent.agro@investplatform.ru',  '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE),
+    (204, 'emitent.kuzn@investplatform.ru',  '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE),
+    (205, 'emitent.med@investplatform.ru',   '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 3, TRUE, TRUE, FALSE);
 
 -- Investors
 INSERT INTO users (id, email, password_hash, role_id, is_enabled, is_account_non_locked, is_2fa_enabled) VALUES
-    (300, 'investor.fl@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (301, 'investor.ip@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (302, 'investor.ul@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (303, 'morozov.a@investplatform.ru',        '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (304, 'nikolaeva.d@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (305, 'pavlov.k@investplatform.ru',         '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (306, 'kapitalinvest@investplatform.ru',    '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (307, 'belov.m@investplatform.ru',          '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (308, 'tikhonova.a@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE),
-    (309, 'venchurfond@investplatform.ru',      '$2b$10$2GQ.ifnsR27fTd4SVmxwrOjjiyY4./OkboVDuGe9UpJlpCDt6WIfG', 4, TRUE, TRUE, FALSE);
+    (300, 'investor.fl@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (301, 'investor.ip@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (302, 'investor.ul@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (303, 'morozov.a@investplatform.ru',        '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (304, 'nikolaeva.d@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (305, 'pavlov.k@investplatform.ru',         '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (306, 'kapitalinvest@investplatform.ru',    '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (307, 'belov.m@investplatform.ru',          '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (308, 'tikhonova.a@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE),
+    (309, 'venchurfond@investplatform.ru',      '$2a$12$KmJC7G4B45nihAGgOevjueCFoo1NUBCAFl9AobCu3GDqyUT1tl.OC', 4, TRUE, TRUE, FALSE);
 
 -- Reset sequence
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
