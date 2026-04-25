@@ -3,6 +3,7 @@ package com.example.investplatform.controller;
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
+import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.service.PaymentService;
 import com.example.investplatform.infrastructure.security.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -81,5 +82,22 @@ public class PaymentRestController {
     @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT', 'OPERATOR', 'ADMIN')")
     public ResponseEntity<PaymentResponseDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.getById(id));
+    }
+
+    @Operation(summary = "Актуальный статус платежа",
+            description = "Принудительно перезапрашивает статус у ЮKassa (минуя 30-секундный порог свежести), " +
+                    "если платёж ещё не в финальном статусе. Если статус уже succeeded/canceled — отдаёт из кэша. " +
+                    "Используется фронтендом для поллинга после закрытия виджета, чтобы убедиться, " +
+                    "что backend получил подтверждение от ЮKassa.")
+    @ApiResponse(responseCode = "200", description = "Текущий статус платежа", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = PaymentStatusDto.class))
+    })
+    @ApiResponse(responseCode = "404", description = "Платёж не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT', 'OPERATOR', 'ADMIN')")
+    public ResponseEntity<PaymentStatusDto> getStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.getStatus(id));
     }
 }

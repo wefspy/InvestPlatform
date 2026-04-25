@@ -38,6 +38,17 @@ public class PaymentReconciliationService {
         if (updatedAt != null && updatedAt.isAfter(LocalDateTime.now().minus(STALE_THRESHOLD_ON_READ))) {
             return payment;
         }
+        return reconcile(payment);
+    }
+
+    public Payment forceRefresh(Payment payment) {
+        if (TERMINAL_STATUSES.contains(payment.getYukassaStatus())) {
+            return payment;
+        }
+        return reconcile(payment);
+    }
+
+    private Payment reconcile(Payment payment) {
         try {
             paymentService.applyPaymentStateFromApi(payment.getYukassaPaymentId());
             return paymentRepository.findById(payment.getId()).orElse(payment);

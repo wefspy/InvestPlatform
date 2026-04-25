@@ -2,6 +2,7 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
+import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaAmountDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaConfirmationDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaPaymentCreateRequest;
@@ -122,6 +123,22 @@ public class PaymentService {
 
         return paymentRepository.findByPersonalAccountId(account.getId(), pageable)
                 .map(payment -> toResponseDto(reconciliationService.refreshIfStale(payment), null));
+    }
+
+    public PaymentStatusDto getStatus(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "Платёж с ID %d не найден".formatted(paymentId)));
+        payment = reconciliationService.forceRefresh(payment);
+        return new PaymentStatusDto(
+                payment.getId(),
+                payment.getYukassaPaymentId(),
+                payment.getYukassaStatus(),
+                payment.getPaidAt(),
+                payment.getCanceledAt(),
+                payment.getCancellationReason(),
+                payment.getUpdatedAt()
+        );
     }
 
     /**
