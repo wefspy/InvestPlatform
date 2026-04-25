@@ -110,6 +110,18 @@ services:
           cpus: "0.25"
           memory: 192M
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: investplatform-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from ${DOMAIN_NAME} --to frontend:80
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.17.0
     container_name: investplatform-postgres-exporter
@@ -300,6 +312,10 @@ services:
           memory: 64M
 
 volumes:
+  caddy_data:
+    name: invest-caddy-data
+  caddy_config:
+    name: invest-caddy-config
   minio-data:
     name: invest-minio-data
   postgres-data:
