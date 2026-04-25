@@ -33,7 +33,7 @@ public class PaymentRestController {
     private final PaymentService paymentService;
 
     @Operation(summary = "Создание платежа на пополнение лицевого счёта через ЮKassa",
-            description = "Создаёт платёж и возвращает confirmation_url — на него нужно перенаправить клиента для оплаты.")
+            description = "Создаёт платёж и возвращает confirmation_token — его нужно передать в JS-виджет ЮKassa (YooMoneyCheckoutWidget) на фронтенде.")
     @ApiResponse(responseCode = "200", description = "Платёж создан", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = PaymentResponseDto.class))
     })

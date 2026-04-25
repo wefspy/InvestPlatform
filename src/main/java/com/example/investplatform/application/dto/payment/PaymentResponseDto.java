@@ -11,7 +11,7 @@ public record PaymentResponseDto(
         String currency,
         String paymentMethodType,
         String description,
-        String confirmationUrl,
+        String confirmationToken,
         LocalDateTime paidAt,
         LocalDateTime createdAt
 ) {

@@ -8,9 +8,10 @@ public record YookassaConfirmationDto(
         String type,
         @JsonProperty("return_url") String returnUrl,
         @JsonProperty("confirmation_url") String confirmationUrl,
+        @JsonProperty("confirmation_token") String confirmationToken,
         String locale
 ) {
-    public static YookassaConfirmationDto redirect(String returnUrl) {
-        return new YookassaConfirmationDto("redirect", returnUrl, null, "ru_RU");
+    public static YookassaConfirmationDto embedded() {
+        return new YookassaConfirmationDto("embedded", null, null, null, "ru_RU");
     }
 }

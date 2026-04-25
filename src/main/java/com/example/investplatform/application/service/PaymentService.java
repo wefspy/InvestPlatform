@@ -74,7 +74,7 @@ public class PaymentService {
         YookassaPaymentCreateRequest request = new YookassaPaymentCreateRequest(
                 YookassaAmountDto.of(dto.amount(), currency),
                 description,
-                YookassaConfirmationDto.redirect(yookassaProperties.getReturnUrl()),
+                YookassaConfirmationDto.embedded(),
                 true,
                 metadata
         );
@@ -100,10 +100,10 @@ public class PaymentService {
 
         payment = paymentRepository.save(payment);
 
-        String confirmationUrl = response.confirmation() != null
-                ? response.confirmation().confirmationUrl() : null;
+        String confirmationToken = response.confirmation() != null
+                ? response.confirmation().confirmationToken() : null;
 
-        return toResponseDto(payment, confirmationUrl);
+        return toResponseDto(payment, confirmationToken);
     }
 
     @Transactional(readOnly = true)
@@ -264,7 +264,7 @@ public class PaymentService {
         return objectMapper.convertValue(node, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
     }
 
-    private PaymentResponseDto toResponseDto(Payment payment, String confirmationUrl) {
+    private PaymentResponseDto toResponseDto(Payment payment, String confirmationToken) {
         return new PaymentResponseDto(
                 payment.getId(),
                 payment.getYukassaPaymentId(),
@@ -273,7 +273,7 @@ public class PaymentService {
                 payment.getCurrency(),
                 payment.getPaymentMethodType(),
                 payment.getDescription(),
-                confirmationUrl,
+                confirmationToken,
                 payment.getPaidAt(),
                 payment.getCreatedAt()
         );
