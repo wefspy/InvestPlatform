@@ -117,7 +117,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    command: caddy reverse-proxy --from ${DOMAIN_NAME} --to frontend:80
+    command: caddy reverse-proxy --from ${DOMAIN_NAME} --to investplatform-frontend:80
     volumes:
       - caddy_data:/data
       - caddy_config:/config
