@@ -78,3 +78,5 @@ app:
     connect-timeout: 10s
     read-timeout: 30s
     allowed-webhook-ips: ${YOOKASSA_ALLOWED_WEBHOOK_IPS:}
+server:
+  forward-headers-strategy: native
