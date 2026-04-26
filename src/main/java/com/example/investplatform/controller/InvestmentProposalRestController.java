@@ -5,6 +5,7 @@ import com.example.investplatform.application.dto.proposal.*;
 import com.example.investplatform.application.service.InvestmentProposalService;
 import com.example.investplatform.infrastructure.security.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,6 +24,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -266,14 +270,54 @@ public class InvestmentProposalRestController {
         return ResponseEntity.ok(proposalService.getById(id));
     }
 
-    @Operation(summary = "Список активных ИП",
-            description = "Возвращает ИП в статусе 'active', доступные для инвестирования. Доступно всем авторизованным.")
+    @Operation(summary = "Список активных ИП с фильтрами",
+            description = "Возвращает ИП в статусе 'active', доступные для инвестирования. "
+                    + "Поддерживает поиск по названию, фильтрацию по способу инвестирования, эмитенту, "
+                    + "диапазонам сумм, цены за единицу и срока действия. Все фильтры опциональны. "
+                    + "Сортировка задаётся стандартным параметром Pageable `sort` "
+                    + "(например, sort=createdAt,desc или sort=pricePerUnit,asc). "
+                    + "По умолчанию сортировка по дате создания (DESC). Доступно всем авторизованным.")
     @ApiResponse(responseCode = "200", description = "Список активных ИП")
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'EMITENT', 'INVESTOR')")
     public ResponseEntity<Page<InvestmentProposalListItemDto>> getActive(
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(proposalService.getActive(pageable));
+            @Parameter(description = "Полнотекстовый поиск по названию ИП (LIKE, без регистра)")
+            @RequestParam(required = false) String q,
+            @Parameter(description = "Код способа инвестирования (например, 'securities')")
+            @RequestParam(required = false) String investmentMethodCode,
+            @Parameter(description = "ID эмитента")
+            @RequestParam(required = false) Long emitentId,
+            @Parameter(description = "Минимальный порог входа от (включительно)")
+            @RequestParam(required = false) BigDecimal minInvestmentAmountFrom,
+            @Parameter(description = "Минимальный порог входа до (включительно)")
+            @RequestParam(required = false) BigDecimal minInvestmentAmountTo,
+            @Parameter(description = "Максимальный лимит сбора от (включительно)")
+            @RequestParam(required = false) BigDecimal maxInvestmentAmountFrom,
+            @Parameter(description = "Максимальный лимит сбора до (включительно)")
+            @RequestParam(required = false) BigDecimal maxInvestmentAmountTo,
+            @Parameter(description = "Цена за единицу от (включительно)")
+            @RequestParam(required = false) BigDecimal pricePerUnitFrom,
+            @Parameter(description = "Цена за единицу до (включительно)")
+            @RequestParam(required = false) BigDecimal pricePerUnitTo,
+            @Parameter(description = "Дата окончания приёма заявок от (включительно), формат yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate endDateFrom,
+            @Parameter(description = "Дата окончания приёма заявок до (включительно), формат yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate endDateTo,
+            @Parameter(description = "Только ИП с/без преимущественного права")
+            @RequestParam(required = false) Boolean hasPreemptiveRight,
+            @Parameter(description = "Только ИП, в которых ещё есть свободные слоты "
+                    + "(collected_amount + reserved_amount < max_investment_amount). По умолчанию false.")
+            @RequestParam(required = false) Boolean onlyAvailable,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        ProposalCatalogFilterDto filter = new ProposalCatalogFilterDto(
+                q, investmentMethodCode, emitentId,
+                minInvestmentAmountFrom, minInvestmentAmountTo,
+                maxInvestmentAmountFrom, maxInvestmentAmountTo,
+                pricePerUnitFrom, pricePerUnitTo,
+                endDateFrom, endDateTo,
+                hasPreemptiveRight, onlyAvailable
+        );
+        return ResponseEntity.ok(proposalService.getActive(filter, pageable));
     }
 
     // ========================= АДМИНИСТРАТОР =========================

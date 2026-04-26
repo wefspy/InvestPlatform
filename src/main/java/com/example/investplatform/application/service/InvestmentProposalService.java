@@ -554,9 +554,23 @@ public class InvestmentProposalService {
     }
 
     @Transactional(readOnly = true)
-    public Page<InvestmentProposalListItemDto> getActive(Pageable pageable) {
-        return proposalRepository.findByStatusCode(ACTIVE_STATUS, pageable)
-                .map(this::toListItemDto);
+    public Page<InvestmentProposalListItemDto> getActive(ProposalCatalogFilterDto filter, Pageable pageable) {
+        return proposalRepository.findActiveWithFilters(
+                filter.q(),
+                filter.investmentMethodCode(),
+                filter.emitentId(),
+                filter.minInvestmentAmountFrom(),
+                filter.minInvestmentAmountTo(),
+                filter.maxInvestmentAmountFrom(),
+                filter.maxInvestmentAmountTo(),
+                filter.pricePerUnitFrom(),
+                filter.pricePerUnitTo(),
+                filter.endDateFrom(),
+                filter.endDateTo(),
+                filter.hasPreemptiveRight(),
+                filter.onlyAvailable(),
+                pageable
+        ).map(this::toListItemDto);
     }
 
     @Transactional(readOnly = true)

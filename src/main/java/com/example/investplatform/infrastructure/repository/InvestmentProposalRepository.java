@@ -83,6 +83,63 @@ public interface InvestmentProposalRepository extends JpaRepository<InvestmentPr
     Page<InvestmentProposal> findAllWithDetails(Pageable pageable);
 
     /**
+     * Активные ИП с фильтрами для каталога.
+     * Все параметры опциональны; null означает «без фильтра по этому полю».
+     * Параметр onlyAvailable=true оставляет только ИП, где (collected + reserved) меньше максимума.
+     */
+    @Query(value = """
+            SELECT p FROM InvestmentProposal p
+            JOIN FETCH p.status s
+            JOIN FETCH p.investmentMethod m
+            WHERE s.code = 'active'
+              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (:methodCode IS NULL OR m.code = :methodCode)
+              AND (:emitentId IS NULL OR p.emitent.id = :emitentId)
+              AND (:minAmountFrom IS NULL OR p.minInvestmentAmount >= :minAmountFrom)
+              AND (:minAmountTo IS NULL OR p.minInvestmentAmount <= :minAmountTo)
+              AND (:maxAmountFrom IS NULL OR p.maxInvestmentAmount >= :maxAmountFrom)
+              AND (:maxAmountTo IS NULL OR p.maxInvestmentAmount <= :maxAmountTo)
+              AND (:priceFrom IS NULL OR p.pricePerUnit >= :priceFrom)
+              AND (:priceTo IS NULL OR p.pricePerUnit <= :priceTo)
+              AND (:endDateFrom IS NULL OR p.proposalEndDate >= :endDateFrom)
+              AND (:endDateTo IS NULL OR p.proposalEndDate <= :endDateTo)
+              AND (:hasPreemptiveRight IS NULL OR p.hasPreemptiveRight = :hasPreemptiveRight)
+              AND (:onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
+            """,
+            countQuery = """
+            SELECT COUNT(p) FROM InvestmentProposal p
+            WHERE p.status.code = 'active'
+              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (:methodCode IS NULL OR p.investmentMethod.code = :methodCode)
+              AND (:emitentId IS NULL OR p.emitent.id = :emitentId)
+              AND (:minAmountFrom IS NULL OR p.minInvestmentAmount >= :minAmountFrom)
+              AND (:minAmountTo IS NULL OR p.minInvestmentAmount <= :minAmountTo)
+              AND (:maxAmountFrom IS NULL OR p.maxInvestmentAmount >= :maxAmountFrom)
+              AND (:maxAmountTo IS NULL OR p.maxInvestmentAmount <= :maxAmountTo)
+              AND (:priceFrom IS NULL OR p.pricePerUnit >= :priceFrom)
+              AND (:priceTo IS NULL OR p.pricePerUnit <= :priceTo)
+              AND (:endDateFrom IS NULL OR p.proposalEndDate >= :endDateFrom)
+              AND (:endDateTo IS NULL OR p.proposalEndDate <= :endDateTo)
+              AND (:hasPreemptiveRight IS NULL OR p.hasPreemptiveRight = :hasPreemptiveRight)
+              AND (:onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
+            """)
+    Page<InvestmentProposal> findActiveWithFilters(
+            @Param("q") String q,
+            @Param("methodCode") String investmentMethodCode,
+            @Param("emitentId") Long emitentId,
+            @Param("minAmountFrom") BigDecimal minInvestmentAmountFrom,
+            @Param("minAmountTo") BigDecimal minInvestmentAmountTo,
+            @Param("maxAmountFrom") BigDecimal maxInvestmentAmountFrom,
+            @Param("maxAmountTo") BigDecimal maxInvestmentAmountTo,
+            @Param("priceFrom") BigDecimal pricePerUnitFrom,
+            @Param("priceTo") BigDecimal pricePerUnitTo,
+            @Param("endDateFrom") LocalDate endDateFrom,
+            @Param("endDateTo") LocalDate endDateTo,
+            @Param("hasPreemptiveRight") Boolean hasPreemptiveRight,
+            @Param("onlyAvailable") Boolean onlyAvailable,
+            Pageable pageable);
+
+    /**
      * Атомарный захват ИП оператором.
      * WHERE locked_by IS NULL гарантирует, что только один оператор получит строку.
      * Возвращает количество обновлённых строк (0 = кто-то уже забрал).
