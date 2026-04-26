@@ -84,6 +84,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       - SPRING_PROFILES_ACTIVE=docker
       - MINIO_URL=http://minio:9000
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -XX:+ExitOnOutOfMemoryError
     ports:
       - "8080:8080"
     depends_on:
@@ -105,10 +106,10 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 384M
+          memory: 2048M
         reservations:
           cpus: "0.25"
-          memory: 192M
+          memory: 1024M
 
   caddy:
     image: caddy:2

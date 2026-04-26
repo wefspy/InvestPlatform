@@ -2,6 +2,7 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
+import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaAmountDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaConfirmationDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaPaymentCreateRequest;
@@ -28,6 +29,8 @@ import tools.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +58,7 @@ public class PaymentService {
     private final InvestorRepository investorRepository;
     private final EmitentRepository emitentRepository;
     private final ObjectMapper objectMapper;
+    private final PaymentReconciliationService reconciliationService;
 
     @Transactional
     public PaymentResponseDto initDeposit(Long userId, DepositRequestDto dto) {
@@ -74,7 +78,7 @@ public class PaymentService {
         YookassaPaymentCreateRequest request = new YookassaPaymentCreateRequest(
                 YookassaAmountDto.of(dto.amount(), currency),
                 description,
-                YookassaConfirmationDto.redirect(yookassaProperties.getReturnUrl()),
+                YookassaConfirmationDto.embedded(),
                 true,
                 metadata
         );
@@ -100,18 +104,41 @@ public class PaymentService {
 
         payment = paymentRepository.save(payment);
 
-        String confirmationUrl = response.confirmation() != null
-                ? response.confirmation().confirmationUrl() : null;
+        String confirmationToken = response.confirmation() != null
+                ? response.confirmation().confirmationToken() : null;
 
-        return toResponseDto(payment, confirmationUrl);
+        return toResponseDto(payment, confirmationToken);
     }
 
-    @Transactional(readOnly = true)
     public PaymentResponseDto getById(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "Платёж с ID %d не найден".formatted(paymentId)));
+        payment = reconciliationService.refreshIfStale(payment);
         return toResponseDto(payment, null);
+    }
+
+    public Page<PaymentResponseDto> getHistory(Long userId, Pageable pageable) {
+        PersonalAccount account = findPersonalAccount(userId);
+
+        return paymentRepository.findByPersonalAccountId(account.getId(), pageable)
+                .map(payment -> toResponseDto(reconciliationService.refreshIfStale(payment), null));
+    }
+
+    public PaymentStatusDto getStatus(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "Платёж с ID %d не найден".formatted(paymentId)));
+        payment = reconciliationService.forceRefresh(payment);
+        return new PaymentStatusDto(
+                payment.getId(),
+                payment.getYukassaPaymentId(),
+                payment.getYukassaStatus(),
+                payment.getPaidAt(),
+                payment.getCanceledAt(),
+                payment.getCancellationReason(),
+                payment.getUpdatedAt()
+        );
     }
 
     /**
@@ -264,7 +291,7 @@ public class PaymentService {
         return objectMapper.convertValue(node, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
     }
 
-    private PaymentResponseDto toResponseDto(Payment payment, String confirmationUrl) {
+    private PaymentResponseDto toResponseDto(Payment payment, String confirmationToken) {
         return new PaymentResponseDto(
                 payment.getId(),
                 payment.getYukassaPaymentId(),
@@ -273,7 +300,7 @@ public class PaymentService {
                 payment.getCurrency(),
                 payment.getPaymentMethodType(),
                 payment.getDescription(),
-                confirmationUrl,
+                confirmationToken,
                 payment.getPaidAt(),
                 payment.getCreatedAt()
         );

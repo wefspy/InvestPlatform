@@ -14,7 +14,6 @@ public class YookassaProperties {
     private String apiUrl;
     private String shopId;
     private String secretKey;
-    private String returnUrl;
     private String currency;
     private Duration connectTimeout;
     private Duration readTimeout;

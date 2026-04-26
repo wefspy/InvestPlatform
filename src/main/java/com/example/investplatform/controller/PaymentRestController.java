@@ -3,6 +3,7 @@ package com.example.investplatform.controller;
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
+import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.service.PaymentService;
 import com.example.investplatform.infrastructure.security.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,7 +38,7 @@ public class PaymentRestController {
     private final PaymentService paymentService;
 
     @Operation(summary = "Создание платежа на пополнение лицевого счёта через ЮKassa",
-            description = "Создаёт платёж и возвращает confirmation_url — на него нужно перенаправить клиента для оплаты.")
+            description = "Создаёт платёж и возвращает confirmation_token — его нужно передать в JS-виджет ЮKassa (YooMoneyCheckoutWidget) на фронтенде.")
     @ApiResponse(responseCode = "200", description = "Платёж создан", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = PaymentResponseDto.class))
     })
@@ -44,12 +49,26 @@ public class PaymentRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @PostMapping("/deposit")
-    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT')")
+    @PreAuthorize("hasRole('INVESTOR')")
     public ResponseEntity<PaymentResponseDto> deposit(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody DepositRequestDto request) {
         PaymentResponseDto response = paymentService.initDeposit(userDetails.getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "История платежей текущего пользователя",
+            description = "Возвращает список платежей по лицевому счёту текущего пользователя с пагинацией. По умолчанию сортировка по дате создания (новые первые).")
+    @ApiResponse(responseCode = "200", description = "Список платежей")
+    @ApiResponse(responseCode = "404", description = "Лицевой счёт не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping
+    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT')")
+    public ResponseEntity<Page<PaymentResponseDto>> getHistory(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.getHistory(userDetails.getId(), pageable));
     }
 
     @Operation(summary = "Получение платежа по ID")
@@ -63,5 +82,22 @@ public class PaymentRestController {
     @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT', 'OPERATOR', 'ADMIN')")
     public ResponseEntity<PaymentResponseDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.getById(id));
+    }
+
+    @Operation(summary = "Актуальный статус платежа",
+            description = "Принудительно перезапрашивает статус у ЮKassa (минуя 30-секундный порог свежести), " +
+                    "если платёж ещё не в финальном статусе. Если статус уже succeeded/canceled — отдаёт из кэша. " +
+                    "Используется фронтендом для поллинга после закрытия виджета, чтобы убедиться, " +
+                    "что backend получил подтверждение от ЮKassa.")
+    @ApiResponse(responseCode = "200", description = "Текущий статус платежа", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = PaymentStatusDto.class))
+    })
+    @ApiResponse(responseCode = "404", description = "Платёж не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT', 'OPERATOR', 'ADMIN')")
+    public ResponseEntity<PaymentStatusDto> getStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.getStatus(id));
     }
 }
