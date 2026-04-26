@@ -111,7 +111,7 @@ services:
           memory: 192M
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2
     container_name: investplatform-caddy
     restart: unless-stopped
     ports:
