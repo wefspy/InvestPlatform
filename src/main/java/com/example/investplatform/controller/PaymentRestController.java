@@ -49,7 +49,7 @@ public class PaymentRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @PostMapping("/deposit")
-    @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT')")
+    @PreAuthorize("hasRole('INVESTOR')")
     public ResponseEntity<PaymentResponseDto> deposit(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody DepositRequestDto request) {
