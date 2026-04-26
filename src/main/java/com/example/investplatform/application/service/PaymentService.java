@@ -1,6 +1,7 @@
 package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
+import com.example.investplatform.application.dto.payment.PaymentHistoryItemDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
 import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.dto.payment.yookassa.YookassaAmountDto;
@@ -30,14 +31,20 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -118,11 +125,83 @@ public class PaymentService {
         return toResponseDto(payment, null);
     }
 
-    public Page<PaymentResponseDto> getHistory(Long userId, Pageable pageable) {
+    public Page<PaymentHistoryItemDto> getHistory(Long userId, Pageable pageable) {
         PersonalAccount account = findPersonalAccount(userId);
 
-        return paymentRepository.findByPersonalAccountId(account.getId(), pageable)
-                .map(payment -> toResponseDto(reconciliationService.refreshIfStale(payment), null));
+        // Освежаем нефинальные orphan-платежи (без AccountTransaction): pending → succeeded/canceled.
+        // Те, что станут succeeded, получат AccountTransaction в handleSucceeded и из orphan-выборки выпадут.
+        paymentRepository.findOrphanByPersonalAccountId(account.getId())
+                .forEach(reconciliationService::refreshIfStale);
+
+        List<Payment> orphans = paymentRepository.findOrphanByPersonalAccountId(account.getId());
+
+        int pageNumber = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        // Тянем достаточно транзакций, чтобы покрыть запрошенную страницу при любом распределении orphan-ов.
+        int txFetchSize = Math.max((pageNumber + 1) * pageSize, 1);
+        Page<AccountTransaction> txPage = transactionRepository.findWithPaymentByPersonalAccountId(
+                account.getId(),
+                PageRequest.of(0, txFetchSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        List<PaymentHistoryItemDto> merged = new ArrayList<>(
+                orphans.size() + txPage.getNumberOfElements());
+        txPage.forEach(tx -> merged.add(toHistoryItemDto(tx)));
+        orphans.forEach(p -> merged.add(toOrphanHistoryItemDto(p)));
+        merged.sort(Comparator.comparing(PaymentHistoryItemDto::createdAt).reversed());
+
+        int from = Math.min(pageNumber * pageSize, merged.size());
+        int to = Math.min(from + pageSize, merged.size());
+        List<PaymentHistoryItemDto> slice = new ArrayList<>(merged.subList(from, to));
+
+        long total = orphans.size() + txPage.getTotalElements();
+        return new PageImpl<>(slice, pageable, total);
+    }
+
+    private PaymentHistoryItemDto toHistoryItemDto(AccountTransaction tx) {
+        Payment payment = tx.getPayment();
+        return new PaymentHistoryItemDto(
+                tx.getId(),
+                tx.getTransactionType(),
+                tx.getAmount(),
+                tx.getBalanceAfter(),
+                tx.getDescription(),
+                tx.getCreatedAt(),
+                payment != null ? payment.getId() : null,
+                payment != null ? payment.getYukassaPaymentId() : null,
+                payment != null ? payment.getYukassaStatus() : null,
+                payment != null ? payment.getPaymentMethodType() : null,
+                payment != null ? payment.getReceiptUrl() : null,
+                payment != null ? payment.getPaidAt() : null
+        );
+    }
+
+    private PaymentHistoryItemDto toOrphanHistoryItemDto(Payment p) {
+        return new PaymentHistoryItemDto(
+                p.getId(),
+                mapPaymentTypeToTransactionType(p),
+                p.getAmount(),
+                null,
+                p.getDescription(),
+                p.getCreatedAt(),
+                p.getId(),
+                p.getYukassaPaymentId(),
+                p.getYukassaStatus(),
+                p.getPaymentMethodType(),
+                p.getReceiptUrl(),
+                p.getPaidAt()
+        );
+    }
+
+    private TransactionType mapPaymentTypeToTransactionType(Payment p) {
+        return switch (p.getPaymentType()) {
+            case DEPOSIT -> TransactionType.DEPOSIT;
+            case WITHDRAWAL -> TransactionType.WITHDRAWAL;
+            case COMMISSION -> TransactionType.COMMISSION;
+            case TRANSFER -> p.getDirection() == PaymentDirection.INBOUND
+                    ? TransactionType.TRANSFER_IN
+                    : TransactionType.TRANSFER_OUT;
+        };
     }
 
     public PaymentStatusDto getStatus(Long paymentId) {

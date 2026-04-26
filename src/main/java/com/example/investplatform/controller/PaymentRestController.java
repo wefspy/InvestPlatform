@@ -2,6 +2,7 @@ package com.example.investplatform.controller;
 
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.payment.DepositRequestDto;
+import com.example.investplatform.application.dto.payment.PaymentHistoryItemDto;
 import com.example.investplatform.application.dto.payment.PaymentResponseDto;
 import com.example.investplatform.application.dto.payment.PaymentStatusDto;
 import com.example.investplatform.application.service.PaymentService;
@@ -57,15 +58,19 @@ public class PaymentRestController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "История платежей текущего пользователя",
-            description = "Возвращает список платежей по лицевому счёту текущего пользователя с пагинацией. По умолчанию сортировка по дате создания (новые первые).")
-    @ApiResponse(responseCode = "200", description = "Список платежей")
+    @Operation(summary = "История платежей и операций по счёту текущего пользователя",
+            description = "Возвращает единый журнал движений по лицевому счёту с пагинацией: " +
+                    "пополнения через ЮKassa, заморозку средств при создании договора, разблокировку при отзыве/отклонении, " +
+                    "списания по инвестициям, комиссии платформы и поступления эмитенту. " +
+                    "Для операций, связанных с платежом ЮKassa, возвращаются также yukassaPaymentId, статус и ссылка на чек. " +
+                    "По умолчанию сортировка по дате (новые первые).")
+    @ApiResponse(responseCode = "200", description = "Список операций")
     @ApiResponse(responseCode = "404", description = "Лицевой счёт не найден", content = {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('INVESTOR', 'EMITENT')")
-    public ResponseEntity<Page<PaymentResponseDto>> getHistory(
+    public ResponseEntity<Page<PaymentHistoryItemDto>> getHistory(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(paymentService.getHistory(userDetails.getId(), pageable));
