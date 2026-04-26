@@ -92,7 +92,7 @@ public interface InvestmentProposalRepository extends JpaRepository<InvestmentPr
             JOIN FETCH p.status s
             JOIN FETCH p.investmentMethod m
             WHERE s.code = 'active'
-              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (CAST(:q AS string) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
               AND (:methodCode IS NULL OR m.code = :methodCode)
               AND (:emitentId IS NULL OR p.emitent.id = :emitentId)
               AND (:minAmountFrom IS NULL OR p.minInvestmentAmount >= :minAmountFrom)
@@ -104,12 +104,12 @@ public interface InvestmentProposalRepository extends JpaRepository<InvestmentPr
               AND (:endDateFrom IS NULL OR p.proposalEndDate >= :endDateFrom)
               AND (:endDateTo IS NULL OR p.proposalEndDate <= :endDateTo)
               AND (:hasPreemptiveRight IS NULL OR p.hasPreemptiveRight = :hasPreemptiveRight)
-              AND (:onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
+              AND (:onlyAvailable IS NULL OR :onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
             """,
             countQuery = """
             SELECT COUNT(p) FROM InvestmentProposal p
             WHERE p.status.code = 'active'
-              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (CAST(:q AS string) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
               AND (:methodCode IS NULL OR p.investmentMethod.code = :methodCode)
               AND (:emitentId IS NULL OR p.emitent.id = :emitentId)
               AND (:minAmountFrom IS NULL OR p.minInvestmentAmount >= :minAmountFrom)
@@ -121,7 +121,7 @@ public interface InvestmentProposalRepository extends JpaRepository<InvestmentPr
               AND (:endDateFrom IS NULL OR p.proposalEndDate >= :endDateFrom)
               AND (:endDateTo IS NULL OR p.proposalEndDate <= :endDateTo)
               AND (:hasPreemptiveRight IS NULL OR p.hasPreemptiveRight = :hasPreemptiveRight)
-              AND (:onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
+              AND (:onlyAvailable IS NULL OR :onlyAvailable = FALSE OR p.collectedAmount + p.reservedAmount < p.maxInvestmentAmount)
             """)
     Page<InvestmentProposal> findActiveWithFilters(
             @Param("q") String q,
