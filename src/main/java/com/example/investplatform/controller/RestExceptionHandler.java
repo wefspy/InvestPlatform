@@ -356,6 +356,17 @@ public class RestExceptionHandler {
         );
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorDto> exception(IllegalArgumentException exception,
+                                                 HttpServletRequest request) {
+        return buildErrorResponse(
+                exception,
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST,
+                request
+        );
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiErrorDto> exception(EntityNotFoundException exception,
                                                  HttpServletRequest request) {
