@@ -135,7 +135,7 @@ public class InvestorRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<InvestorDocumentResponseDto>> getDocuments(@PathVariable Long id) {
         return ResponseEntity.ok(investorService.getDocuments(id));
     }

@@ -8,6 +8,7 @@ public record InvestmentContractResponseDto(
         String contractNumber,
         Long proposalId,
         String proposalTitle,
+        Long emitentId,
         Long investorId,
         String statusCode,
         String statusName,

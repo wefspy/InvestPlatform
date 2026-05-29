@@ -102,7 +102,7 @@ public class EmitentRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<EmitentDocumentResponseDto>> getDocuments(@PathVariable Long id) {
         return ResponseEntity.ok(emitentService.getDocuments(id));
     }

@@ -643,6 +643,7 @@ public class InvestmentContractService {
                 c.getContractNumber(),
                 c.getProposal().getId(),
                 c.getProposal().getTitle(),
+                c.getProposal().getEmitent().getId(),
                 c.getInvestor().getId(),
                 c.getStatus().getCode(),
                 c.getStatus().getName(),
