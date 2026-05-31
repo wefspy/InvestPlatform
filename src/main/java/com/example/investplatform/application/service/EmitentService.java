@@ -4,6 +4,8 @@ import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEnti
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
 import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentLegalEntityDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentPrivateEntrepreneurDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
 import com.example.investplatform.infrastructure.repository.*;
@@ -102,12 +104,86 @@ public class EmitentService {
         return toResponse(emitent, user, account);
     }
 
+    @Transactional
+    public EmitentResponseDto updatePrivateEntrepreneur(Long emitentId,
+                                                        UpdateEmitentPrivateEntrepreneurDto dto) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentPrivateEntrepreneur pe = privateEntrepreneurRepository.findByEmitentId(emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Эмитент с ID %d не является индивидуальным предпринимателем".formatted(emitentId)));
+
+        pe.setLastName(dto.lastName());
+        pe.setFirstName(dto.firstName());
+        pe.setPatronymic(dto.patronymic());
+        pe.setBirthDate(dto.birthDate());
+        pe.setBirthPlace(dto.birthPlace());
+        pe.setOgrnip(dto.ogrnip());
+        pe.setInn(dto.inn());
+        pe.setRegistrationAddress(dto.registrationAddress());
+        pe.setSnils(dto.snils());
+        pe.setMaterialFacts(dto.materialFacts());
+        privateEntrepreneurRepository.save(pe);
+
+        return toResponse(emitent, emitent.getUser(), emitent.getPersonalAccount());
+    }
+
+    @Transactional
+    public EmitentResponseDto updateLegalEntity(Long emitentId, UpdateEmitentLegalEntityDto dto) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentLegalEntity le = legalEntityRepository.findByEmitentId(emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Эмитент с ID %d не является юридическим лицом".formatted(emitentId)));
+
+        le.setFullName(dto.fullName());
+        le.setShortName(dto.shortName());
+        le.setOgrn(dto.ogrn());
+        le.setInn(dto.inn());
+        le.setKpp(dto.kpp());
+        le.setLegalAddress(dto.legalAddress());
+        le.setPostalAddress(dto.postalAddress());
+        le.setOkpo(dto.okpo());
+        le.setOkato(dto.okato());
+        le.setOrganisationForm(dto.organisationForm());
+        le.setMaterialFacts(dto.materialFacts());
+        legalEntityRepository.save(le);
+
+        return toResponse(emitent, emitent.getUser(), emitent.getPersonalAccount());
+    }
+
     @Transactional(readOnly = true)
     public List<EmitentDocumentResponseDto> getDocuments(Long emitentId) {
         findEmitentOrThrow(emitentId);
         return emitentDocumentRepository.findByEmitentId(emitentId).stream()
                 .map(this::toDocumentResponse)
                 .toList();
+    }
+
+    @Transactional
+    public EmitentDocumentResponseDto addDocument(Long emitentId, String typeCode, MultipartFile file) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentDocumentType docType = emitentDocumentTypeRepository.findByCode(typeCode)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Неизвестный тип документа эмитента: " + typeCode));
+
+        String objectKey = "emitents/%d/%s_%s".formatted(
+                emitentId, typeCode, file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        EmitentDocument doc = EmitentDocument.builder()
+                .emitent(emitent)
+                .documentType(docType)
+                .reportYear((short) LocalDate.now().getYear())
+                .fileName(file.getOriginalFilename())
+                .filePath(objectKey)
+                .fileSize(file.getSize())
+                .mimeType(file.getContentType())
+                .build();
+        doc = emitentDocumentRepository.save(doc);
+
+        return toDocumentResponse(doc);
     }
 
     @Transactional

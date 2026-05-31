@@ -2,6 +2,7 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.CreateOperatorDto;
 import com.example.investplatform.application.dto.OperatorResponseDto;
+import com.example.investplatform.application.dto.UpdateOperatorDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
 import com.example.investplatform.infrastructure.repository.OperatorRepository;
@@ -60,6 +61,26 @@ public class OperatorService {
         return new OperatorResponseDto(
                 operator.getId(),
                 user.getEmail(),
+                operator.getLastName(),
+                operator.getFirstName(),
+                operator.getPatronymic()
+        );
+    }
+
+    @Transactional
+    public OperatorResponseDto update(Long operatorId, UpdateOperatorDto dto) {
+        Operator operator = operatorRepository.findById(operatorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Оператор с ID %d не найден".formatted(operatorId)));
+
+        operator.setLastName(dto.lastName());
+        operator.setFirstName(dto.firstName());
+        operator.setPatronymic(dto.patronymic());
+        operatorRepository.save(operator);
+
+        return new OperatorResponseDto(
+                operator.getId(),
+                operator.getUser().getEmail(),
                 operator.getLastName(),
                 operator.getFirstName(),
                 operator.getPatronymic()
