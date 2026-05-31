@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -48,6 +49,22 @@ public class OperatorRestController {
     public ResponseEntity<OperatorResponseDto> create(@RequestBody @Valid CreateOperatorDto dto) {
         OperatorResponseDto response = operatorService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Получение данных оператора по ID (только для администратора)")
+    @ApiResponse(responseCode = "200", description = "Данные оператора", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = OperatorResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Оператор не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OperatorResponseDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(operatorService.getById(id));
     }
 
     @Operation(summary = "Редактирование данных оператора (только для администратора)",

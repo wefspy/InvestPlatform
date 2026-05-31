@@ -2,7 +2,10 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDetailDto;
 import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
+import com.example.investplatform.application.dto.emitent.EmitentLegalEntityDataDto;
+import com.example.investplatform.application.dto.emitent.EmitentPrivateEntrepreneurDataDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
 import com.example.investplatform.application.dto.emitent.UpdateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.UpdateEmitentPrivateEntrepreneurDto;
@@ -102,6 +105,32 @@ public class EmitentService {
         saveDocuments(emitent, documents);
 
         return toResponse(emitent, user, account);
+    }
+
+    @Transactional(readOnly = true)
+    public EmitentDetailDto getById(Long emitentId) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentPrivateEntrepreneurDataDto peData = null;
+        EmitentLegalEntityDataDto leData = null;
+
+        if (emitent.getEmitentType() == EmitentType.PRIVATE_ENTREPRENEUR) {
+            peData = privateEntrepreneurRepository.findByEmitentId(emitentId)
+                    .map(this::toPeData)
+                    .orElse(null);
+        } else if (emitent.getEmitentType() == EmitentType.LEGAL_ENTITY) {
+            leData = legalEntityRepository.findByEmitentId(emitentId)
+                    .map(this::toLeData)
+                    .orElse(null);
+        }
+
+        return new EmitentDetailDto(
+                emitent.getId(),
+                emitent.getUser().getEmail(),
+                emitent.getEmitentType(),
+                emitent.getPersonalAccount().getAccountNumber(),
+                peData,
+                leData);
     }
 
     @Transactional
@@ -226,6 +255,37 @@ public class EmitentService {
         return emitentRepository.findById(emitentId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Эмитент с ID %d не найден".formatted(emitentId)));
+    }
+
+    private EmitentPrivateEntrepreneurDataDto toPeData(EmitentPrivateEntrepreneur pe) {
+        return new EmitentPrivateEntrepreneurDataDto(
+                pe.getLastName(),
+                pe.getFirstName(),
+                pe.getPatronymic(),
+                pe.getBirthDate(),
+                pe.getBirthPlace(),
+                pe.getOgrnip(),
+                pe.getInn(),
+                pe.getRegistrationAddress(),
+                pe.getSnils(),
+                pe.getMaterialFacts(),
+                pe.getInvestedCurrentYear());
+    }
+
+    private EmitentLegalEntityDataDto toLeData(EmitentLegalEntity le) {
+        return new EmitentLegalEntityDataDto(
+                le.getFullName(),
+                le.getShortName(),
+                le.getOgrn(),
+                le.getInn(),
+                le.getKpp(),
+                le.getLegalAddress(),
+                le.getPostalAddress(),
+                le.getOkpo(),
+                le.getOkato(),
+                le.getOrganisationForm(),
+                le.getMaterialFacts(),
+                le.getInvestedCurrentYear());
     }
 
     private EmitentDocumentResponseDto toDocumentResponse(EmitentDocument doc) {

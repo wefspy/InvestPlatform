@@ -67,6 +67,21 @@ public class OperatorService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public OperatorResponseDto getById(Long operatorId) {
+        Operator operator = operatorRepository.findById(operatorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Оператор с ID %d не найден".formatted(operatorId)));
+
+        return new OperatorResponseDto(
+                operator.getId(),
+                operator.getUser().getEmail(),
+                operator.getLastName(),
+                operator.getFirstName(),
+                operator.getPatronymic()
+        );
+    }
+
     @Transactional
     public OperatorResponseDto update(Long operatorId, UpdateOperatorDto dto) {
         Operator operator = operatorRepository.findById(operatorId)

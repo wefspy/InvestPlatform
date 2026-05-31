@@ -4,6 +4,7 @@ import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorIndividualDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorLegalEntityDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.investor.InvestorDetailDto;
 import com.example.investplatform.application.dto.investor.InvestorDocumentResponseDto;
 import com.example.investplatform.application.dto.investor.InvestorResponseDto;
 import com.example.investplatform.application.dto.investor.UpdateInvestorIndividualDto;
@@ -128,6 +129,26 @@ public class InvestorRestController {
 
         InvestorResponseDto response = investorService.createLegalEntity(dto, documents);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // ========================= ПОЛУЧЕНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Получение данных инвестора по ID",
+            description = "Возвращает анкетные данные инвестора. В зависимости от типа заполнен блок "
+                    + "`individual` (ФЛ), `privateEntrepreneur` (ИП) или `legalEntity` (ЮЛ), остальные блоки равны null.")
+    @ApiResponse(responseCode = "200", description = "Данные инвестора", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorDetailDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    public ResponseEntity<InvestorDetailDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(investorService.getById(id));
     }
 
     // ========================= РЕДАКТИРОВАНИЕ ДАННЫХ =========================

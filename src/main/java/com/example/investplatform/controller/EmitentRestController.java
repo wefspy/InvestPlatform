@@ -3,6 +3,7 @@ package com.example.investplatform.controller;
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDetailDto;
 import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
 import com.example.investplatform.application.dto.emitent.UpdateEmitentLegalEntityDto;
@@ -94,6 +95,26 @@ public class EmitentRestController {
 
         EmitentResponseDto response = emitentService.createLegalEntity(dto, documents);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // ========================= ПОЛУЧЕНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Получение данных эмитента по ID",
+            description = "Возвращает анкетные данные эмитента. В зависимости от типа заполнен блок "
+                    + "`privateEntrepreneur` (ИП) или `legalEntity` (ЮЛ), второй блок равен null.")
+    @ApiResponse(responseCode = "200", description = "Данные эмитента", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentDetailDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    public ResponseEntity<EmitentDetailDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(emitentService.getById(id));
     }
 
     // ========================= РЕДАКТИРОВАНИЕ ДАННЫХ =========================
