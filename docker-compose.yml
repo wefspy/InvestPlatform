@@ -118,10 +118,12 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    command: caddy reverse-proxy --from ${DOMAIN_NAME} --to investplatform-frontend:80
+    env_file:
+      - .env
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.17.0

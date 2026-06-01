@@ -1,0 +1,14 @@
+# Основной домен — фронтенд
+{$DOMAIN_NAME} {
+    reverse_proxy investplatform-frontend:80
+}
+
+# Админка Motor Admin
+{$ADMIN_DOMAIN} {
+    reverse_proxy investplatform-motor-admin:3000
+}
+
+# MinIO Console
+{$MINIO_DOMAIN} {
+    reverse_proxy investplatform-minio:9001
+}
