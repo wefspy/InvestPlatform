@@ -46,7 +46,7 @@ public class RegistryExportRestController {
             content = @Content(mediaType = "application/json",
                     schema = @Schema(implementation = ApiErrorDto.class)))
     @GetMapping("/export")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<byte[]> exportRegistrationBook(
             @Parameter(description = "Дата начала периода (yyyy-MM-dd)", required = true, example = "2025-01-01")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,

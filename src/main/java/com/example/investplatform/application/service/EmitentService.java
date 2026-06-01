@@ -2,8 +2,13 @@ package com.example.investplatform.application.service;
 
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDetailDto;
 import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
+import com.example.investplatform.application.dto.emitent.EmitentLegalEntityDataDto;
+import com.example.investplatform.application.dto.emitent.EmitentPrivateEntrepreneurDataDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentLegalEntityDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentPrivateEntrepreneurDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
 import com.example.investplatform.infrastructure.repository.*;
@@ -103,11 +108,111 @@ public class EmitentService {
     }
 
     @Transactional(readOnly = true)
+    public EmitentDetailDto getById(Long emitentId) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentPrivateEntrepreneurDataDto peData = null;
+        EmitentLegalEntityDataDto leData = null;
+
+        if (emitent.getEmitentType() == EmitentType.PRIVATE_ENTREPRENEUR) {
+            peData = privateEntrepreneurRepository.findByEmitentId(emitentId)
+                    .map(this::toPeData)
+                    .orElse(null);
+        } else if (emitent.getEmitentType() == EmitentType.LEGAL_ENTITY) {
+            leData = legalEntityRepository.findByEmitentId(emitentId)
+                    .map(this::toLeData)
+                    .orElse(null);
+        }
+
+        return new EmitentDetailDto(
+                emitent.getId(),
+                emitent.getUser().getEmail(),
+                emitent.getEmitentType(),
+                emitent.getPersonalAccount().getAccountNumber(),
+                peData,
+                leData);
+    }
+
+    @Transactional
+    public EmitentResponseDto updatePrivateEntrepreneur(Long emitentId,
+                                                        UpdateEmitentPrivateEntrepreneurDto dto) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentPrivateEntrepreneur pe = privateEntrepreneurRepository.findByEmitentId(emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Эмитент с ID %d не является индивидуальным предпринимателем".formatted(emitentId)));
+
+        pe.setLastName(dto.lastName());
+        pe.setFirstName(dto.firstName());
+        pe.setPatronymic(dto.patronymic());
+        pe.setBirthDate(dto.birthDate());
+        pe.setBirthPlace(dto.birthPlace());
+        pe.setOgrnip(dto.ogrnip());
+        pe.setInn(dto.inn());
+        pe.setRegistrationAddress(dto.registrationAddress());
+        pe.setSnils(dto.snils());
+        pe.setMaterialFacts(dto.materialFacts());
+        privateEntrepreneurRepository.save(pe);
+
+        return toResponse(emitent, emitent.getUser(), emitent.getPersonalAccount());
+    }
+
+    @Transactional
+    public EmitentResponseDto updateLegalEntity(Long emitentId, UpdateEmitentLegalEntityDto dto) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentLegalEntity le = legalEntityRepository.findByEmitentId(emitentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Эмитент с ID %d не является юридическим лицом".formatted(emitentId)));
+
+        le.setFullName(dto.fullName());
+        le.setShortName(dto.shortName());
+        le.setOgrn(dto.ogrn());
+        le.setInn(dto.inn());
+        le.setKpp(dto.kpp());
+        le.setLegalAddress(dto.legalAddress());
+        le.setPostalAddress(dto.postalAddress());
+        le.setOkpo(dto.okpo());
+        le.setOkato(dto.okato());
+        le.setOrganisationForm(dto.organisationForm());
+        le.setMaterialFacts(dto.materialFacts());
+        legalEntityRepository.save(le);
+
+        return toResponse(emitent, emitent.getUser(), emitent.getPersonalAccount());
+    }
+
+    @Transactional(readOnly = true)
     public List<EmitentDocumentResponseDto> getDocuments(Long emitentId) {
         findEmitentOrThrow(emitentId);
         return emitentDocumentRepository.findByEmitentId(emitentId).stream()
                 .map(this::toDocumentResponse)
                 .toList();
+    }
+
+    @Transactional
+    public EmitentDocumentResponseDto addDocument(Long emitentId, String typeCode, MultipartFile file) {
+        Emitent emitent = findEmitentOrThrow(emitentId);
+
+        EmitentDocumentType docType = emitentDocumentTypeRepository.findByCode(typeCode)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Неизвестный тип документа эмитента: " + typeCode));
+
+        String objectKey = "emitents/%d/%s_%s".formatted(
+                emitentId, typeCode, file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        EmitentDocument doc = EmitentDocument.builder()
+                .emitent(emitent)
+                .documentType(docType)
+                .reportYear((short) LocalDate.now().getYear())
+                .fileName(file.getOriginalFilename())
+                .filePath(objectKey)
+                .fileSize(file.getSize())
+                .mimeType(file.getContentType())
+                .build();
+        doc = emitentDocumentRepository.save(doc);
+
+        return toDocumentResponse(doc);
     }
 
     @Transactional
@@ -150,6 +255,37 @@ public class EmitentService {
         return emitentRepository.findById(emitentId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Эмитент с ID %d не найден".formatted(emitentId)));
+    }
+
+    private EmitentPrivateEntrepreneurDataDto toPeData(EmitentPrivateEntrepreneur pe) {
+        return new EmitentPrivateEntrepreneurDataDto(
+                pe.getLastName(),
+                pe.getFirstName(),
+                pe.getPatronymic(),
+                pe.getBirthDate(),
+                pe.getBirthPlace(),
+                pe.getOgrnip(),
+                pe.getInn(),
+                pe.getRegistrationAddress(),
+                pe.getSnils(),
+                pe.getMaterialFacts(),
+                pe.getInvestedCurrentYear());
+    }
+
+    private EmitentLegalEntityDataDto toLeData(EmitentLegalEntity le) {
+        return new EmitentLegalEntityDataDto(
+                le.getFullName(),
+                le.getShortName(),
+                le.getOgrn(),
+                le.getInn(),
+                le.getKpp(),
+                le.getLegalAddress(),
+                le.getPostalAddress(),
+                le.getOkpo(),
+                le.getOkato(),
+                le.getOrganisationForm(),
+                le.getMaterialFacts(),
+                le.getInvestedCurrentYear());
     }
 
     private EmitentDocumentResponseDto toDocumentResponse(EmitentDocument doc) {

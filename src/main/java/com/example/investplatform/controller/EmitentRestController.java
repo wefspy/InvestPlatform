@@ -3,8 +3,11 @@ package com.example.investplatform.controller;
 import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentLegalEntityDto;
 import com.example.investplatform.application.dto.emitent.CreateEmitentPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.emitent.EmitentDetailDto;
 import com.example.investplatform.application.dto.emitent.EmitentDocumentResponseDto;
 import com.example.investplatform.application.dto.emitent.EmitentResponseDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentLegalEntityDto;
+import com.example.investplatform.application.dto.emitent.UpdateEmitentPrivateEntrepreneurDto;
 import com.example.investplatform.application.service.EmitentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -94,6 +97,66 @@ public class EmitentRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // ========================= ПОЛУЧЕНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Получение данных эмитента по ID",
+            description = "Возвращает анкетные данные эмитента. В зависимости от типа заполнен блок "
+                    + "`privateEntrepreneur` (ИП) или `legalEntity` (ЮЛ), второй блок равен null.")
+    @ApiResponse(responseCode = "200", description = "Данные эмитента", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentDetailDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    public ResponseEntity<EmitentDetailDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(emitentService.getById(id));
+    }
+
+    // ========================= РЕДАКТИРОВАНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Редактирование данных эмитента — индивидуальный предприниматель (администратор)",
+            description = "Обновляет анкетные данные эмитента-ИП по его идентификатору.")
+    @ApiResponse(responseCode = "200", description = "Данные обновлены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент не найден или не является ИП, либо некорректные данные", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping("/private-entrepreneur/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmitentResponseDto> updatePrivateEntrepreneur(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateEmitentPrivateEntrepreneurDto dto) {
+        return ResponseEntity.ok(emitentService.updatePrivateEntrepreneur(id, dto));
+    }
+
+    @Operation(summary = "Редактирование данных эмитента — юридическое лицо (администратор)",
+            description = "Обновляет анкетные данные эмитента-ЮЛ по его идентификатору.")
+    @ApiResponse(responseCode = "200", description = "Данные обновлены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент не найден или не является ЮЛ, либо некорректные данные", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping("/legal-entity/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmitentResponseDto> updateLegalEntity(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateEmitentLegalEntityDto dto) {
+        return ResponseEntity.ok(emitentService.updateLegalEntity(id, dto));
+    }
+
     // ========================= ДОКУМЕНТЫ =========================
 
     @Operation(summary = "Получение списка документов эмитента")
@@ -102,9 +165,31 @@ public class EmitentRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<EmitentDocumentResponseDto>> getDocuments(@PathVariable Long id) {
         return ResponseEntity.ok(emitentService.getDocuments(id));
+    }
+
+    @Operation(summary = "Добавление нового документа эмитента",
+            description = "Загружает новый документ указанного типа. Код типа передаётся в поле `type` "
+                    + "(например, financial_report, charter, egrul_extract).")
+    @ApiResponse(responseCode = "201", description = "Документ добавлен", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = EmitentDocumentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Эмитент не найден или неизвестный тип документа", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PostMapping(value = "/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmitentDocumentResponseDto> addDocument(
+            @PathVariable Long id,
+            @RequestParam("type") String type,
+            @RequestPart("file") MultipartFile file) {
+        EmitentDocumentResponseDto response = emitentService.addDocument(id, type, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Удаление документа эмитента")

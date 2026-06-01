@@ -4,8 +4,12 @@ import com.example.investplatform.application.dto.ApiErrorDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorIndividualDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorLegalEntityDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.investor.InvestorDetailDto;
 import com.example.investplatform.application.dto.investor.InvestorDocumentResponseDto;
 import com.example.investplatform.application.dto.investor.InvestorResponseDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorIndividualDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorLegalEntityDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorPrivateEntrepreneurDto;
 import com.example.investplatform.application.service.InvestorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -127,6 +131,85 @@ public class InvestorRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // ========================= ПОЛУЧЕНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Получение данных инвестора по ID",
+            description = "Возвращает анкетные данные инвестора. В зависимости от типа заполнен блок "
+                    + "`individual` (ФЛ), `privateEntrepreneur` (ИП) или `legalEntity` (ЮЛ), остальные блоки равны null.")
+    @ApiResponse(responseCode = "200", description = "Данные инвестора", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorDetailDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    public ResponseEntity<InvestorDetailDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(investorService.getById(id));
+    }
+
+    // ========================= РЕДАКТИРОВАНИЕ ДАННЫХ =========================
+
+    @Operation(summary = "Редактирование данных инвестора — физическое лицо (администратор)",
+            description = "Обновляет анкетные данные инвестора-ФЛ по его идентификатору.")
+    @ApiResponse(responseCode = "200", description = "Данные обновлены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден или не является ФЛ, либо некорректные данные", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping("/individual/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InvestorResponseDto> updateIndividual(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateInvestorIndividualDto dto) {
+        return ResponseEntity.ok(investorService.updateIndividual(id, dto));
+    }
+
+    @Operation(summary = "Редактирование данных инвестора — индивидуальный предприниматель (администратор)",
+            description = "Обновляет анкетные данные инвестора-ИП по его идентификатору.")
+    @ApiResponse(responseCode = "200", description = "Данные обновлены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден или не является ИП, либо некорректные данные", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping("/private-entrepreneur/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InvestorResponseDto> updatePrivateEntrepreneur(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateInvestorPrivateEntrepreneurDto dto) {
+        return ResponseEntity.ok(investorService.updatePrivateEntrepreneur(id, dto));
+    }
+
+    @Operation(summary = "Редактирование данных инвестора — юридическое лицо (администратор)",
+            description = "Обновляет анкетные данные инвестора-ЮЛ по его идентификатору.")
+    @ApiResponse(responseCode = "200", description = "Данные обновлены", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден или не является ЮЛ, либо некорректные данные", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PutMapping("/legal-entity/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InvestorResponseDto> updateLegalEntity(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateInvestorLegalEntityDto dto) {
+        return ResponseEntity.ok(investorService.updateLegalEntity(id, dto));
+    }
+
     // ========================= ДОКУМЕНТЫ =========================
 
     @Operation(summary = "Получение списка документов инвестора")
@@ -135,9 +218,31 @@ public class InvestorRestController {
             @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
     })
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<InvestorDocumentResponseDto>> getDocuments(@PathVariable Long id) {
         return ResponseEntity.ok(investorService.getDocuments(id));
+    }
+
+    @Operation(summary = "Добавление нового документа инвестора",
+            description = "Загружает новый документ указанного типа. Код типа передаётся в поле `type` "
+                    + "(например, passport_main, passport_registration, ip_registration, le_charter).")
+    @ApiResponse(responseCode = "201", description = "Документ добавлен", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = InvestorDocumentResponseDto.class))
+    })
+    @ApiResponse(responseCode = "400", description = "Инвестор не найден или неизвестный тип документа", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @ApiResponse(responseCode = "403", description = "Доступ запрещён", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorDto.class))
+    })
+    @PostMapping(value = "/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InvestorDocumentResponseDto> addDocument(
+            @PathVariable Long id,
+            @RequestParam("type") String type,
+            @RequestPart("file") MultipartFile file) {
+        InvestorDocumentResponseDto response = investorService.addDocument(id, type, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Удаление документа инвестора")

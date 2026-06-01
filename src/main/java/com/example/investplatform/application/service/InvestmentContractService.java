@@ -11,8 +11,12 @@ import com.example.investplatform.model.entity.contract.ContractStatusHistory;
 import com.example.investplatform.model.entity.contract.InvestmentContract;
 import com.example.investplatform.model.entity.investor.Investor;
 import com.example.investplatform.model.entity.proposal.InvestmentProposal;
+import com.example.investplatform.model.entity.registry.RegistryOperation;
+import com.example.investplatform.model.entity.registry.RegistryOperationDocument;
+import com.example.investplatform.model.entity.registry.RegistryOperationType;
 import com.example.investplatform.model.entity.user.Operator;
 import com.example.investplatform.model.entity.user.User;
+import com.example.investplatform.model.enums.OperationKind;
 import com.example.investplatform.model.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +44,8 @@ public class InvestmentContractService {
 
     private static final int WITHDRAWAL_PERIOD_DAYS = 5;
     private static final String PLATFORM_ACCOUNT_NUMBER = "PLATFORM-001";
+    private static final String REGISTRY_OPERATION_TYPE_TRAN = "TRAN";
+    private static final String SETTLEMENT_CURRENCY_RUB = "RUB";
 
     private final InvestmentContractRepository contractRepository;
     private final ContractStatusRepository contractStatusRepository;
@@ -51,6 +57,9 @@ public class InvestmentContractService {
     private final AccountTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final CommissionService commissionService;
+    private final RegistryOperationRepository registryOperationRepository;
+    private final RegistryOperationDocumentRepository registryOperationDocumentRepository;
+    private final RegistryOperationTypeRepository registryOperationTypeRepository;
 
     // ========================= Инвестор =========================
 
@@ -521,7 +530,47 @@ public class InvestmentContractService {
 
         contract.setStatus(completedStatus);
         contract.setCompletedAt(LocalDateTime.now());
+
+        recordRegistryOperation(contract);
+
         return contractRepository.save(contract);
+    }
+
+    private void recordRegistryOperation(InvestmentContract contract) {
+        RegistryOperationType tranType = registryOperationTypeRepository.findByCode(REGISTRY_OPERATION_TYPE_TRAN)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Тип операции реестра '%s' не найден".formatted(REGISTRY_OPERATION_TYPE_TRAN)));
+
+        PersonalAccount emitentAccount = contract.getProposal().getEmitent().getPersonalAccount();
+        PersonalAccount investorAccount = contract.getInvestor().getPersonalAccount();
+        LocalDateTime now = LocalDateTime.now();
+
+        RegistryOperation operation = RegistryOperation.builder()
+                .operationType(tranType)
+                .operationName("Переход прав по договору #%s".formatted(contract.getContractNumber()))
+                .operationKind(OperationKind.TRANSACTION)
+                .processingDatetime(now)
+                .processingReference(contract.getContractNumber())
+                .dateState(now.toLocalDate())
+                .accountTransfer(emitentAccount)
+                .accountReceive(investorAccount)
+                .security(contract.getSecurity())
+                .quantity(contract.getSecuritiesQuantity())
+                .settlementCurrency(SETTLEMENT_CURRENCY_RUB)
+                .settlementAmount(contract.getAmount())
+                .content("Переход прав собственности на ЦБ по договору инвестирования #%s, ИП #%d"
+                        .formatted(contract.getContractNumber(), contract.getProposal().getId()))
+                .build();
+        operation = registryOperationRepository.save(operation);
+
+        RegistryOperationDocument document = RegistryOperationDocument.builder()
+                .registryOperation(operation)
+                .inDocNum(contract.getContractNumber())
+                .inRegDate(contract.getSignedAt() != null ? contract.getSignedAt() : now)
+                .outDocNum(contract.getContractNumber())
+                .outDocDate(now)
+                .build();
+        registryOperationDocumentRepository.save(document);
     }
 
     /**
@@ -594,6 +643,7 @@ public class InvestmentContractService {
                 c.getContractNumber(),
                 c.getProposal().getId(),
                 c.getProposal().getTitle(),
+                c.getProposal().getEmitent().getId(),
                 c.getInvestor().getId(),
                 c.getStatus().getCode(),
                 c.getStatus().getName(),

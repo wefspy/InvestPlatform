@@ -18,7 +18,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,7 +34,6 @@ public class RegistryExportService {
     private static final String REFS_VERSION = "1";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-    private static final Charset WINDOWS_1251 = Charset.forName("windows-1251");
 
     private final RegistryOperationRepository operationRepository;
     private final RegistryOperationDocumentRepository documentRepository;
@@ -63,9 +62,9 @@ public class RegistryExportService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             XMLOutputFactory factory = XMLOutputFactory.newInstance();
             XMLStreamWriter w = factory.createXMLStreamWriter(
-                    new OutputStreamWriter(baos, WINDOWS_1251));
+                    new OutputStreamWriter(baos, StandardCharsets.UTF_8));
 
-            w.writeStartDocument("windows-1251", "1.0");
+            w.writeStartDocument("UTF-8", "1.0");
             w.writeStartElement("REGISTRATION_BOOK_EXT");
 
             writeService(w, idDoc, senderName, senderId);

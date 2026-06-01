@@ -3,8 +3,15 @@ package com.example.investplatform.application.service;
 import com.example.investplatform.application.dto.investor.CreateInvestorIndividualDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorLegalEntityDto;
 import com.example.investplatform.application.dto.investor.CreateInvestorPrivateEntrepreneurDto;
+import com.example.investplatform.application.dto.investor.InvestorDetailDto;
 import com.example.investplatform.application.dto.investor.InvestorDocumentResponseDto;
+import com.example.investplatform.application.dto.investor.InvestorIndividualDataDto;
+import com.example.investplatform.application.dto.investor.InvestorLegalEntityDataDto;
+import com.example.investplatform.application.dto.investor.InvestorPrivateEntrepreneurDataDto;
 import com.example.investplatform.application.dto.investor.InvestorResponseDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorIndividualDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorLegalEntityDto;
+import com.example.investplatform.application.dto.investor.UpdateInvestorPrivateEntrepreneurDto;
 import com.example.investplatform.application.exception.RoleNotFoundException;
 import com.example.investplatform.application.exception.UsernameAlreadyTakenException;
 import com.example.investplatform.infrastructure.repository.*;
@@ -151,11 +158,162 @@ public class InvestorService {
     }
 
     @Transactional(readOnly = true)
+    public InvestorDetailDto getById(Long investorId) {
+        Investor investor = findInvestorOrThrow(investorId);
+
+        InvestorIndividualDataDto individualData = null;
+        InvestorPrivateEntrepreneurDataDto peData = null;
+        InvestorLegalEntityDataDto leData = null;
+
+        switch (investor.getInvestorType()) {
+            case INDIVIDUAL -> individualData = individualRepository.findByInvestorId(investorId)
+                    .map(this::toIndividualData)
+                    .orElse(null);
+            case PRIVATE_ENTREPRENEUR -> peData = privateEntrepreneurRepository.findByInvestorId(investorId)
+                    .map(this::toPeData)
+                    .orElse(null);
+            case LEGAL_ENTITY -> leData = legalEntityRepository.findByInvestorId(investorId)
+                    .map(this::toLeData)
+                    .orElse(null);
+        }
+
+        return new InvestorDetailDto(
+                investor.getId(),
+                investor.getUser().getEmail(),
+                investor.getInvestorType(),
+                investor.getPersonalAccount().getAccountNumber(),
+                investor.getIsQualified(),
+                investor.getRiskDeclarationAccepted(),
+                individualData,
+                peData,
+                leData);
+    }
+
+    @Transactional
+    public InvestorResponseDto updateIndividual(Long investorId, UpdateInvestorIndividualDto dto) {
+        Investor investor = findInvestorOrThrow(investorId);
+
+        InvestorIndividual individual = individualRepository.findByInvestorId(investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Инвестор с ID %d не является физическим лицом".formatted(investorId)));
+
+        individual.setLastName(dto.lastName());
+        individual.setFirstName(dto.firstName());
+        individual.setPatronymic(dto.patronymic());
+        individual.setGender(dto.gender());
+        individual.setCitizenship(dto.citizenship());
+        individual.setBirthDate(dto.birthDate());
+        individual.setBirthPlace(dto.birthPlace());
+        individual.setIdDocType(dto.idDocType());
+        individual.setIdDocSeries(dto.idDocSeries());
+        individual.setIdDocNumber(dto.idDocNumber());
+        individual.setIdDocIssuedDate(dto.idDocIssuedDate());
+        individual.setIdDocIssuedBy(dto.idDocIssuedBy());
+        individual.setIdDocDepartmentCode(dto.idDocDepartmentCode());
+        individual.setRegistrationAddress(dto.registrationAddress());
+        individual.setResidentialAddress(dto.residentialAddress());
+        individual.setInn(dto.inn());
+        individual.setSnils(dto.snils());
+        individual.setEmail(dto.contactEmail());
+        individual.setPhone(dto.phone());
+        if (dto.investedOtherPlatforms() != null) {
+            individual.setInvestedOtherPlatforms(dto.investedOtherPlatforms());
+        }
+        individualRepository.save(individual);
+
+        return toResponse(investor, investor.getUser(), investor.getPersonalAccount());
+    }
+
+    @Transactional
+    public InvestorResponseDto updatePrivateEntrepreneur(Long investorId,
+                                                         UpdateInvestorPrivateEntrepreneurDto dto) {
+        Investor investor = findInvestorOrThrow(investorId);
+
+        InvestorPrivateEntrepreneur pe = privateEntrepreneurRepository.findByInvestorId(investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Инвестор с ID %d не является индивидуальным предпринимателем".formatted(investorId)));
+
+        pe.setLastName(dto.lastName());
+        pe.setFirstName(dto.firstName());
+        pe.setPatronymic(dto.patronymic());
+        pe.setGender(dto.gender());
+        pe.setCitizenship(dto.citizenship());
+        pe.setBirthDate(dto.birthDate());
+        pe.setBirthPlace(dto.birthPlace());
+        pe.setIdDocType(dto.idDocType());
+        pe.setIdDocSeries(dto.idDocSeries());
+        pe.setIdDocNumber(dto.idDocNumber());
+        pe.setIdDocIssuedDate(dto.idDocIssuedDate());
+        pe.setIdDocIssuedBy(dto.idDocIssuedBy());
+        pe.setIdDocDepartmentCode(dto.idDocDepartmentCode());
+        pe.setRegistrationAddress(dto.registrationAddress());
+        pe.setResidentialAddress(dto.residentialAddress());
+        pe.setInn(dto.inn());
+        pe.setSnils(dto.snils());
+        pe.setOgrnip(dto.ogrnip());
+        pe.setForeignRegistrationInfo(dto.foreignRegistrationInfo());
+        pe.setEmail(dto.contactEmail());
+        pe.setPhone(dto.phone());
+        privateEntrepreneurRepository.save(pe);
+
+        return toResponse(investor, investor.getUser(), investor.getPersonalAccount());
+    }
+
+    @Transactional
+    public InvestorResponseDto updateLegalEntity(Long investorId, UpdateInvestorLegalEntityDto dto) {
+        Investor investor = findInvestorOrThrow(investorId);
+
+        InvestorLegalEntity le = legalEntityRepository.findByInvestorId(investorId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Инвестор с ID %d не является юридическим лицом".formatted(investorId)));
+
+        le.setFullName(dto.fullName());
+        le.setShortName(dto.shortName());
+        le.setOgrn(dto.ogrn());
+        le.setInn(dto.inn());
+        le.setForeignRegistrationInfo(dto.foreignRegistrationInfo());
+        le.setTin(dto.tin());
+        le.setLegalAddress(dto.legalAddress());
+        le.setPostalAddress(dto.postalAddress());
+        le.setEmail(dto.contactEmail());
+        le.setPhone(dto.phone());
+        legalEntityRepository.save(le);
+
+        return toResponse(investor, investor.getUser(), investor.getPersonalAccount());
+    }
+
+    @Transactional(readOnly = true)
     public List<InvestorDocumentResponseDto> getDocuments(Long investorId) {
         findInvestorOrThrow(investorId);
         return investorDocumentRepository.findByInvestorId(investorId).stream()
                 .map(this::toDocumentResponse)
                 .toList();
+    }
+
+    @Transactional
+    public InvestorDocumentResponseDto addDocument(Long investorId, String typeCode, MultipartFile file) {
+        Investor investor = findInvestorOrThrow(investorId);
+
+        InvestorDocumentType docType = investorDocumentTypeRepository.findByCode(typeCode)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Неизвестный тип документа инвестора: " + typeCode));
+
+        String objectKey = "investors/%d/%s_%s".formatted(
+                investorId, typeCode, file.getOriginalFilename());
+        fileStorageService.upload(file, objectKey);
+
+        InvestorDocument doc = InvestorDocument.builder()
+                .investor(investor)
+                .documentType(docType)
+                .reportYear((short) LocalDate.now().getYear())
+                .fileName(file.getOriginalFilename())
+                .filePath(objectKey)
+                .fileSize(file.getSize())
+                .mimeType(file.getContentType())
+                .build();
+        doc = investorDocumentRepository.save(doc);
+
+        return toDocumentResponse(doc);
     }
 
     @Transactional
@@ -198,6 +356,69 @@ public class InvestorService {
         return investorRepository.findById(investorId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Инвестор с ID %d не найден".formatted(investorId)));
+    }
+
+    private InvestorIndividualDataDto toIndividualData(InvestorIndividual ind) {
+        return new InvestorIndividualDataDto(
+                ind.getLastName(),
+                ind.getFirstName(),
+                ind.getPatronymic(),
+                ind.getGender(),
+                ind.getCitizenship(),
+                ind.getBirthDate(),
+                ind.getBirthPlace(),
+                ind.getIdDocType(),
+                ind.getIdDocSeries(),
+                ind.getIdDocNumber(),
+                ind.getIdDocIssuedDate(),
+                ind.getIdDocIssuedBy(),
+                ind.getIdDocDepartmentCode(),
+                ind.getRegistrationAddress(),
+                ind.getResidentialAddress(),
+                ind.getInn(),
+                ind.getSnils(),
+                ind.getEmail(),
+                ind.getPhone(),
+                ind.getInvestedOtherPlatforms());
+    }
+
+    private InvestorPrivateEntrepreneurDataDto toPeData(InvestorPrivateEntrepreneur pe) {
+        return new InvestorPrivateEntrepreneurDataDto(
+                pe.getLastName(),
+                pe.getFirstName(),
+                pe.getPatronymic(),
+                pe.getGender(),
+                pe.getCitizenship(),
+                pe.getBirthDate(),
+                pe.getBirthPlace(),
+                pe.getIdDocType(),
+                pe.getIdDocSeries(),
+                pe.getIdDocNumber(),
+                pe.getIdDocIssuedDate(),
+                pe.getIdDocIssuedBy(),
+                pe.getIdDocDepartmentCode(),
+                pe.getRegistrationAddress(),
+                pe.getResidentialAddress(),
+                pe.getInn(),
+                pe.getSnils(),
+                pe.getOgrnip(),
+                pe.getForeignRegistrationInfo(),
+                pe.getEmail(),
+                pe.getPhone());
+    }
+
+    private InvestorLegalEntityDataDto toLeData(InvestorLegalEntity le) {
+        return new InvestorLegalEntityDataDto(
+                le.getFullName(),
+                le.getShortName(),
+                le.getOgrn(),
+                le.getInn(),
+                le.getForeignRegistrationInfo(),
+                le.getTin(),
+                le.getLegalAddress(),
+                le.getPostalAddress(),
+                le.getEmail(),
+                le.getPhone());
     }
 
     private InvestorDocumentResponseDto toDocumentResponse(InvestorDocument doc) {
